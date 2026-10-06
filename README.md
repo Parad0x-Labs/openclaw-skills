@@ -6,9 +6,9 @@ Agents increasingly call paid APIs and other agents, but they have no wallet-saf
 
 ## At a glance
 
-| **7 npm packages** | **Non-custodial** | **103.9x** |
+| **6 npm packages** | **Non-custodial** | **103.9x** |
 |---|---|---|
-| Pay, charge, metered billing, context compression, MCP tools, identity and one-call setup, published under `@parad0x_labs`. | Your wallet signs every payment. The skill never sees a key, and the USDC cap is enforced before a transaction is built. | Liquefy vault compression on agent-trace fixtures, against 63.8x for zstd -19, with every archive round-trip verified. |
+| Pay, charge, metered billing, context compression, identity and one-call setup, published under `@parad0x_labs`. | Your wallet signs every payment. The skill never sees a key, and the USDC cap is enforced before a transaction is built. | Liquefy vault compression on agent-trace fixtures, against 63.8x for zstd -19, with every archive round-trip verified. |
 
 [![CI](https://github.com/Parad0x-Labs/openclaw-skills/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Parad0x-Labs/openclaw-skills/actions/workflows/ci.yml)
 [![x402-pay on npm](https://img.shields.io/npm/v/@parad0x_labs/openclaw-x402-pay?style=flat&color=303030&labelColor=0a0a0a&label=x402-pay)](https://www.npmjs.com/package/@parad0x_labs/openclaw-x402-pay)
