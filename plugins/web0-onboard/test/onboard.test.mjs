@@ -32,9 +32,11 @@ import {
 } from "../dist/onboard.js";
 import * as onboard from "../dist/onboard.js";
 
-const SEIZED = ["EepqzVBNuzCgD6XGiB19pDDhzFG3gUL4z1nabBYxpfjS"];
-// SHA-256 of compromised program IDs this repo once referenced (held hashed, never named).
+// SHA-256 of compromised program IDs this repo once referenced (held hashed, never named),
+// including the gen-1 x402 access gate and the secp256r1 vault.
 const COMPROMISED_SHA256 = new Set([
+  "d8406486dd119717648b5b6e6f4b8b9a044536b3ab95c34da437add15c5cac36",
+  "efa8237fa114259344b44de2f79c21583ec464ffe5186876c35595bbd11983a1",
   "a7656054f294394e546b39f90c03a0cb31446ac46c37285f5bfc900b3bcea827",
   "35a832bc1dff671d6a806d63ea404ed181ed9675c49d513889e4a3aabda68423",
   "7abaeaa69c452dd5349bbde0858b343984fdef2e1bf32359248915b777c535bc",
@@ -52,7 +54,7 @@ const SERVICES = [{ name: "summarize", priceUsdc: 0.02 }, { name: "translate", p
 
 test("no seized or compromised program ID is referenced; RPC is publicnode", () => {
   for (const id of [DARK_SECP256K1_AUTH, RECEIPT_ANCHOR_MAINNET_RETIRED, NULL_REGISTRAR_MAINNET]) {
-    assert.ok(!SEIZED.includes(id), `${id} is seized`);
+    assert.ok(!COMPROMISED_SHA256.has(sha256(id)), `${id} is seized`);
   }
   for (const v of Object.values(onboard)) {
     if (typeof v !== "string" && (typeof v !== "object" || v === null)) continue;
