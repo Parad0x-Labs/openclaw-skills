@@ -23,9 +23,9 @@
       "package_version": {
         "name": "@parad0x_labs/openclaw-x402-pay",
         "package_json": "skills/x402-pay/package.json",
-        "git_version": "2.0.1",
-        "npm_latest": "2.0.0",
-        "npm_checked_at": "2026-10-06T09:32:24Z"
+        "git_version": "2.0.2",
+        "npm_latest": "2.0.1",
+        "npm_checked_at": "2026-10-06T12:00:19Z"
       },
       "publication_status": "published-older-version",
       "network": null,
@@ -61,7 +61,9 @@
         "a cap on the total debit: the fee leg can take it up to 0.05% above maxAmountUsdc",
         "a mainnet payment in this review pass"
       ],
-      "operational_limitations": [],
+      "operational_limitations": [
+        "2.0.2 (Git, not on npm; npm latest 2.0.1): openclaw.plugin.json declares contracts.tools and repWasmPath/repZkeyPath, package.json openclaw.compat.pluginApi is >=2026.6.1 (\"1.x\" made OpenClaw 2026.x skip the plugin at discovery), README config nests settings under plugins.entries.x402-pay.config."
+      ],
       "supersedes": null
     },
     {
@@ -79,9 +81,9 @@
       "package_version": {
         "name": "@parad0x_labs/openclaw-x402-gate",
         "package_json": "skills/x402-gate/package.json",
-        "git_version": "2.0.1",
-        "npm_latest": "2.0.0",
-        "npm_checked_at": "2026-10-06T08:23:41Z"
+        "git_version": "2.0.2",
+        "npm_latest": "2.0.1",
+        "npm_checked_at": "2026-10-06T12:00:19Z"
       },
       "publication_status": "published-older-version",
       "network": null,
@@ -119,7 +121,9 @@
         "a signed receipt: the receipt is an unsigned SHA-256 hash both sides can compute",
         "on-chain anchoring or netting (neither is done by this skill)"
       ],
-      "operational_limitations": [],
+      "operational_limitations": [
+        "2.0.2 (Git, not on npm; npm latest 2.0.1): openclaw.plugin.json declares contracts.tools and the zk-rep config keys, package.json openclaw.compat.pluginApi is >=2026.6.1, README lists all four tools and the rep config, and rpcUrl is documented as required on mainnet."
+      ],
       "supersedes": null
     },
     {
@@ -135,9 +139,9 @@
       "package_version": {
         "name": "@parad0x_labs/openclaw-payment-session",
         "package_json": "plugins/payment-session/package.json",
-        "git_version": "0.1.1",
-        "npm_latest": "0.1.0",
-        "npm_checked_at": "2026-10-06T09:32:24Z"
+        "git_version": "0.1.2",
+        "npm_latest": "0.1.1",
+        "npm_checked_at": "2026-10-06T12:00:19Z"
       },
       "publication_status": "published-older-version",
       "network": null,
@@ -171,7 +175,8 @@
         "persistence across restarts"
       ],
       "operational_limitations": [
-        "0.1.1 (README and description corrections) is in Git, not on npm; npm latest is 0.1.0."
+        "0.1.1 (README and description corrections) is in Git, not on npm; npm latest is 0.1.0.",
+        "0.1.2 (Git, not on npm; npm latest 0.1.1): openclaw.plugin.json declares contracts.tools and package.json declares openclaw.extensions; without them OpenClaw 2026.6.9 does not load the plugin."
       ],
       "supersedes": null
     },
@@ -188,11 +193,11 @@
       "package_version": {
         "name": "@parad0x_labs/mcp-server",
         "package_json": "skills/mcp-server/package.json",
-        "git_version": "0.2.0",
+        "git_version": "0.2.1",
         "npm_latest": "0.2.0",
-        "npm_checked_at": "2026-10-06T08:23:41Z"
+        "npm_checked_at": "2026-10-06T12:00:19Z"
       },
-      "publication_status": "published",
+      "publication_status": "published-older-version",
       "network": null,
       "program_id": null,
       "deployed_build_hash": null,
@@ -220,7 +225,7 @@
         "receipt anchoring: the server configures no receipt_anchor program and refuses; a devnet receipt_anchor runs at HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs since 2026-10-06"
       ],
       "operational_limitations": [
-        "Git 6be29cf (after the snapshot) changes the anchor_receipt and check_nullifier refusal text to name the devnet receipt_anchor and dark_nullifier_record; npm 0.2.0 carries the earlier wording. The mcp-server tests were not re-run at 6be29cf."
+        "0.2.1 (Git, not on npm; npm latest 0.2.0) carries the 6be29cf refusal text that names the devnet receipt_anchor and dark_nullifier_record; npm 0.2.0 carries the earlier wording."
       ],
       "supersedes": null
     },
@@ -236,9 +241,9 @@
       "package_version": {
         "name": "@parad0x_labs/openclaw-agent-passport",
         "package_json": "plugins/agent-passport/package.json",
-        "git_version": "0.2.0",
-        "npm_latest": "0.1.0",
-        "npm_checked_at": "2026-10-06T09:32:24Z"
+        "git_version": "0.2.1",
+        "npm_latest": "0.2.0",
+        "npm_checked_at": "2026-10-06T12:00:19Z"
       },
       "publication_status": "published-older-version",
       "network": null,
@@ -268,7 +273,8 @@
         "a live lookup in this review pass"
       ],
       "operational_limitations": [
-        "Git 0.2.0 is not on npm; npm latest 0.1.0 still exports the closed receipt_anchor id."
+        "Git 0.2.0 is not on npm; npm latest 0.1.0 still exports the closed receipt_anchor id.",
+        "0.2.1 (Git, not on npm; npm latest 0.2.0): openclaw.plugin.json declares contracts.tools and package.json declares openclaw.extensions; without them OpenClaw 2026.6.9 does not load the plugin."
       ],
       "supersedes": null
     },
@@ -400,9 +406,9 @@
       "package_version": {
         "name": "@parad0x_labs/openclaw-context-capsule",
         "package_json": "skills/context-capsule/package.json",
-        "git_version": "1.7.1",
-        "npm_latest": "1.7.0",
-        "npm_checked_at": "2026-10-06T09:32:24Z"
+        "git_version": "1.7.2",
+        "npm_latest": "1.7.1",
+        "npm_checked_at": "2026-10-06T12:00:19Z"
       },
       "publication_status": "published-older-version",
       "network": null,
@@ -426,7 +432,7 @@
         "end-to-end task token or cost savings"
       ],
       "operational_limitations": [
-        "1.7.1 (release commit 4acc8e4, shipped-file wording only) is in Git, not on npm; npm latest is 1.7.0."
+        "1.7.2 (Git, not on npm; npm latest 1.7.1) reads its settings from plugins.entries.context-capsule.config (api.pluginConfig); 1.7.1 read keys placed directly on the entry, a layout OpenClaw's config validation rejects."
       ],
       "supersedes": null
     }
