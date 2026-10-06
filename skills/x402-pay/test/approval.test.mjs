@@ -116,3 +116,16 @@ test("manifest declares the v2026.6.1 security floor", () => {
   const manifest = JSON.parse(readFileSync(join(here, "..", "openclaw.plugin.json"), "utf8"));
   assert.equal(manifest.minOpenClawVersion, "2026.6.1");
 });
+
+test("manifest declares its tools and config keys; the package targets this host API", () => {
+  const manifest = JSON.parse(readFileSync(join(here, "..", "openclaw.plugin.json"), "utf8"));
+  const pkg = JSON.parse(readFileSync(join(here, "..", "package.json"), "utf8"));
+  assert.deepEqual(manifest.contracts?.tools, ["pay_x402", "rep_identity", "prove_reputation"]);
+  assert.equal(manifest.version, pkg.version);
+  assert.deepEqual(pkg.openclaw?.extensions, ["./src/index.ts"]);
+  // "1.x" made OpenClaw 2026.x skip the plugin at discovery.
+  assert.equal(pkg.openclaw?.compat?.pluginApi, ">=2026.6.1");
+  for (const k of ["repWasmPath", "repZkeyPath", "spendLedgerPath", "rpcUrl"]) {
+    assert.ok(manifest.configSchema.properties[k], `configSchema declares ${k}`);
+  }
+});

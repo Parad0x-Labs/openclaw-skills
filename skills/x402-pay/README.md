@@ -76,9 +76,12 @@ paid the same way.
   "plugins": {
     "entries": {
       "x402-pay": {
-        "maxAmountUsdc": 0.50,     // refuse any single payment above this
-        "allowMainnet": false,      // true = real money on mainnet
-        "rpcUrl": "https://..."     // optional private RPC
+        "enabled": true,
+        "config": {
+          "maxAmountUsdc": 0.50,     // refuse any single payment above this
+          "allowMainnet": false,      // true = real money on mainnet
+          "rpcUrl": "https://..."     // private RPC; required on mainnet
+        }
       }
     }
   }
@@ -88,8 +91,19 @@ paid the same way.
 | Key | Default | Description |
 |---|---|---|
 | `maxAmountUsdc` | `1.0` | Hard per-payment cap on the seller amount, enforced before building any tx; the 5 bps fee is added on top |
-| `allowMainnet` | `false` | Must be `true` to authorize mainnet (real-money) payments |
-| `rpcUrl` | public RPC | Optional Solana RPC override |
+| `allowMainnet` | `false` | Must be `true` to authorize mainnet (real-money) payments. Mainnet also needs `rpcUrl` and `spendLedgerPath` |
+| `rpcUrl` | public devnet RPC | Solana RPC. **Required on mainnet** (no public mainnet fallback) |
+| `spendLedgerPath` | — | Durable spend-ledger file for the caps and the double-pay guard. **Required on mainnet** |
+| `maxTotalUsdc` | 100 x `maxAmountUsdc` | Cumulative spend cap for the process |
+| `allowedRecipients` | — | Optional allowlist of `payTo` addresses |
+| `maxDistinctRecipients` | `100` | Max distinct recipients funded per process (bounds SOL spent on ATA rent) |
+| `requireApproval` | `false` | Return an `approval_required` quote first; the host re-invokes with `approved: true` (see `APPROVAL_INTEGRATION.md`) |
+| `allowInternalHosts` | `false` | Allow loopback/private hosts (local testing only) |
+| `repWasmPath` / `repZkeyPath` | — | Proving artifacts for `prove_reputation` (or pass them per call) |
+
+Plugin settings go under `config` in the plugin entry: OpenClaw validates
+`plugins.entries.x402-pay.config` against the schema in `openclaw.plugin.json` and
+rejects unknown keys.
 
 ## How a payment flows
 

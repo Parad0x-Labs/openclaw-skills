@@ -119,26 +119,80 @@ function readConfig(raw: Record<string, unknown> | undefined): X402PayConfig {
   };
 }
 
-/** Plugin config schema. Lenient by design — host configs commonly arrive as
- *  strings (env/JSON), and readConfig() does the robust coercion + safe defaults
- *  above. additionalProperties stays open so an unknown host key is never rejected. */
+/** Plugin config schema. `openclaw plugins build` generates the manifest
+ *  configSchema (openclaw.plugin.json) from this object, and the host validates
+ *  `plugins.entries.x402-pay.config` against that manifest before the plugin loads,
+ *  so this is the schema the host enforces. readConfig() above still applies the
+ *  safe defaults and coercion for direct (non-host) callers. */
 const ConfigSchema = Type.Object(
   {
-    maxAmountUsdc: Type.Optional(Type.Union([Type.Number(), Type.String()])),
-    allowMainnet: Type.Optional(Type.Union([Type.Boolean(), Type.String()])),
-    maxTotalUsdc: Type.Optional(Type.Union([Type.Number(), Type.String()])),
-    allowedRecipients: Type.Optional(Type.Array(Type.String())),
-    maxDistinctRecipients: Type.Optional(Type.Union([Type.Number(), Type.String()])),
-    rpcUrl: Type.Optional(Type.String()),
-    spendLedgerPath: Type.Optional(Type.String()),
-    allowInternalHosts: Type.Optional(Type.Union([Type.Boolean(), Type.String()])),
-    requireApproval: Type.Optional(Type.Union([Type.Boolean(), Type.String()])),
+    maxAmountUsdc: Type.Optional(
+      Type.Number({
+        minimum: 0,
+        description:
+          "Hard per-payment spend cap. The skill refuses any single 402 payment above this many USDC. An explicit 0 means pay-nothing (refuse all). The 1.0 default applies only when this is left unset.",
+      }),
+    ),
+    allowMainnet: Type.Optional(
+      Type.Boolean({
+        description:
+          "Authorize real-money payments on solana-mainnet. Default: false (opt-in). Set true to enable; mainnet also requires an explicit rpcUrl.",
+      }),
+    ),
+    maxTotalUsdc: Type.Optional(
+      Type.Number({
+        minimum: 0,
+        description:
+          "Cumulative spend cap across this process's lifetime — bounds a malicious endpoint that tries to drain the wallet one under-cap payment at a time. Default: 100x maxAmountUsdc (finite, not off). Raise for higher-volume agents.",
+      }),
+    ),
+    allowedRecipients: Type.Optional(
+      Type.Array(Type.String(), {
+        description:
+          "Optional allowlist of recipient (payTo) addresses. If set, the skill refuses to pay any 402 whose recipient is not listed. The strongest defense against fund redirection — recommended on mainnet.",
+      }),
+    ),
+    maxDistinctRecipients: Type.Optional(
+      Type.Number({
+        minimum: 1,
+        description:
+          "Max distinct recipient (payTo) addresses funded per process. Bounds SOL spent on recipient ATA rent (the USDC caps do NOT bound SOL). Default: 100.",
+      }),
+    ),
+    rpcUrl: Type.Optional(
+      Type.String({
+        description:
+          "Solana RPC URL. REQUIRED on solana-mainnet (the public RPC is a third-party observer and unreliable for real payments). Optional on devnet (defaults to the public devnet endpoint).",
+      }),
+    ),
+    spendLedgerPath: Type.Optional(
+      Type.String({
+        description:
+          "Path to a durable spend-ledger file (JSON). Backs the cumulative cap, the double-pay guard, and the distinct-recipient cap so they survive a process restart. REQUIRED on mainnet (allowMainnet=true): without it, a restart while a payment is pending can broadcast a second real payment. Use a single persistent process per ledger file.",
+      }),
+    ),
+    allowInternalHosts: Type.Optional(
+      Type.Boolean({
+        description:
+          "Allow fetching internal/loopback/link-local/private hosts (turns OFF the SSRF guard). Default false. Set true ONLY for local-dev testing against a localhost gate — never on a production wallet host.",
+      }),
+    ),
+    requireApproval: Type.Optional(
+      Type.Boolean({
+        description:
+          "Require explicit host-side approval before any payment. Default false (auto-pay within caps). When true, pay_x402 returns a structured approval_required quote first; the host confirms with the owner and re-invokes with approved:true. See APPROVAL_INTEGRATION.md.",
+      }),
+    ),
     // zk-rep prover artifacts (track_record.circom). Not bundled — host them (e.g. on
     // Arweave via web0) and point here, or pass per-call in prove_reputation.
-    repWasmPath: Type.Optional(Type.String()),
-    repZkeyPath: Type.Optional(Type.String()),
+    repWasmPath: Type.Optional(
+      Type.String({ description: "Path or URL of track_record.wasm for prove_reputation (else pass wasmPath per call)." }),
+    ),
+    repZkeyPath: Type.Optional(
+      Type.String({ description: "Path or URL of track_record_final.zkey for prove_reputation (else pass zkeyPath per call)." }),
+    ),
   },
-  { additionalProperties: true },
+  { additionalProperties: false },
 );
 
 const PayParams = Type.Object({
@@ -191,10 +245,11 @@ export default defineToolPlugin({
   name: "x402 Pay",
   description:
     "Let your agent pay for x402-gated APIs, data, and other agents on Solana " +
-    "mainnet. Bring your own signer — the skill never holds a private key — with " +
+    "(devnet by default, mainnet opt-in). Bring your own signer — the skill never holds a private key — with " +
     "a hard USDC spend cap. Set allowMainnet=true to enable real-money mainnet payments. " +
     "Also proves PRIVATE reputation (prove_reputation): show you hold enough settled " +
     "receipts to clear a gate without revealing any amount, counterparty, or wallet.",
+  activation: { onStartup: false },
   configSchema: ConfigSchema,
   tools: (tool) => [
     tool({

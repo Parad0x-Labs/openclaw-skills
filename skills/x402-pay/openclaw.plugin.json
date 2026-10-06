@@ -7,7 +7,6 @@
   "enabledByDefault": false,
   "configSchema": {
     "type": "object",
-    "additionalProperties": false,
     "properties": {
       "maxAmountUsdc": {
         "type": "number",
@@ -25,7 +24,9 @@
       },
       "allowedRecipients": {
         "type": "array",
-        "items": { "type": "string" },
+        "items": {
+          "type": "string"
+        },
         "description": "Optional allowlist of recipient (payTo) addresses. If set, the skill refuses to pay any 402 whose recipient is not listed. The strongest defense against fund redirection — recommended on mainnet."
       },
       "maxDistinctRecipients": {
@@ -48,13 +49,32 @@
       "requireApproval": {
         "type": "boolean",
         "description": "Require explicit host-side approval before any payment. Default false (auto-pay within caps). When true, pay_x402 returns a structured approval_required quote first; the host confirms with the owner and re-invokes with approved:true. See APPROVAL_INTEGRATION.md."
+      },
+      "repWasmPath": {
+        "type": "string",
+        "description": "Path or URL of track_record.wasm for prove_reputation (else pass wasmPath per call)."
+      },
+      "repZkeyPath": {
+        "type": "string",
+        "description": "Path or URL of track_record_final.zkey for prove_reputation (else pass zkeyPath per call)."
       }
-    }
+    },
+    "additionalProperties": false
   },
   "secrets": {
     "solanaSignerKeypair": {
       "description": "Solana signing keypair as a JSON byte array. Declared here so the host runtime can manage it via SecretRef without exposing it to the model context. The skill itself uses the host-provided X402Signer interface — this field is for runtimes that supply a raw keypair.",
       "required": false
     }
+  },
+  "name": "x402 Pay",
+  "description": "Let your agent pay for x402-gated APIs, data, and other agents on Solana (devnet by default, mainnet opt-in). Bring your own signer — the skill never holds a private key — with a hard USDC spend cap. Set allowMainnet=true to enable real-money mainnet payments. Also proves PRIVATE reputation (prove_reputation): show you hold enough settled receipts to clear a gate without revealing any amount, counterparty, or wallet.",
+  "version": "2.0.2",
+  "contracts": {
+    "tools": [
+      "pay_x402",
+      "rep_identity",
+      "prove_reputation"
+    ]
   }
 }
