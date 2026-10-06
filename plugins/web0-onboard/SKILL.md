@@ -1,6 +1,6 @@
 ---
 name: web0-onboard
-description: web0 setup for an OpenClaw agent — plan your identity + paid x402 storefront, get the receipt-anchoring status and your .null name status (mainnet registrar retired 2026-08-29; existing names resolve read-only, registration frozen until relaunch). Sell services for USDC on Solana. Non-custodial (your wallet signs).
+description: web0 setup for an OpenClaw agent — plan your identity + paid x402 storefront, get the receipt-anchoring status and your .null name status (mainnet registrar retired 2026-08-29; existing names resolve read-only, mainnet registration frozen). Sell services for USDC on Solana. Non-custodial (your wallet signs).
 tags: web0, null, x402, solana, monetization, agents, openclaw
 requires_openclaw: ">=2026.6.1"
 license: MIT
@@ -29,16 +29,17 @@ validated setup your agent can act on immediately.
   to a client that anchors.
 - **Name status** — if you pass a `name`, it is validated and returned with its
   status: the mainnet registrar is retired, existing names resolve read-only, and
-  registration is frozen until the relaunch. No name is needed to sell.
+  mainnet registration is frozen. No name is needed to sell.
 
 ## Seller-side tools — frozen on mainnet
 
 The mainnet `.null` registrar (`NXgQhepF…`) was retired on 2026-08-29. Existing
 names resolve read-only; registration, endpoint updates, stealth-meta updates and
-transfers are frozen until the relaunch. Against the default (retired) registrar
+transfers are frozen on mainnet. Against the default (retired) registrar
 every tool below refuses — dry runs included — and says so. They build transactions
 only when the plugin config sets `registrar` to a different deployed registrar
-(e.g. devnet, with a matching `rpcUrl`). Your wallet signs (registered by the host
+(e.g. the devnet `null_registrar` `3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ`,
+with a matching devnet `rpcUrl`). Your wallet signs (registered by the host
 via `setWeb0Signer(signer)`); every tool takes `dryRun: true`.
 
 - **`register_null_name({ name })`** — register a `.null` name on the configured
@@ -47,8 +48,7 @@ via `setWeb0Signer(signer)`); every tool takes `dryRun: true`.
   name (`UPDATE_ENDPOINT`). Owner-only, tiny tx fee.
 - **`set_null_stealth_meta({ name, stealth_meta_hex })`** — publish a NullPay
   stealth address for recipient-private pay-by-name (pay-by-name to a one-time
-  stealth address is implemented in code with tests; a devnet redeploy under a
-  fresh key is pending).
+  stealth address runs on devnet under a fresh key since 2026-10-06).
 
 ## The loop it sets up
 
@@ -76,8 +76,8 @@ buyer:  pay_x402(<your x402-gate URL>)  → quote → pay USDC → receipt hash
   that anchors. The mainnet program `6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN` was
   retired 2026-07-14.
 - `.null` names: the mainnet registrar `NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np`
-  was retired 2026-08-29. Existing names resolve read-only; writes are frozen until
-  the registrar relaunch. Recipient-private pay-by-name to a one-time stealth
+  was retired 2026-08-29. Existing names resolve read-only; writes to it are refused.
+  Recipient-private pay-by-name to a one-time stealth
   address runs on devnet under a fresh key since 2026-10-06 (`null_registrar`
   `3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ`).
 
@@ -88,11 +88,14 @@ buyer:  pay_x402(<your x402-gate URL>)  → quote → pay USDC → receipt hash
   "plugins": {
     "entries": {
       "web0-onboard": {
-        "solanaWallet": "<your base58 wallet>",
-        "name": "myagent",
-        "network": "solana-mainnet",
-        // optional: a deployed registrar for the name write tools (unset = retired mainnet → refused)
-        // "registrar": "<registrar program id>", "rpcUrl": "<matching RPC>"
+        "enabled": true,
+        "config": {
+          "solanaWallet": "<your base58 wallet>",
+          "name": "myagent",
+          "network": "solana-mainnet",
+          // optional: a deployed registrar for the name write tools (unset = retired mainnet → refused)
+          // "registrar": "3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ", "rpcUrl": "https://api.devnet.solana.com"
+        }
       }
     }
   }

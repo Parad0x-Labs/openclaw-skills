@@ -14,9 +14,10 @@
  * ProgramData is closed, so the program cannot be invoked). Its accounts persist,
  * so existing NullDomain records and the registry config stay READABLE and names
  * resolve read-only — but register / endpoint / stealth-meta / transfer writes
- * cannot succeed there until a relaunch. The write tools below therefore refuse
- * the retired id (dry runs included) and only build transactions when
- * `config.registrar` names a different, deployed registrar (e.g. on devnet).
+ * cannot succeed there. The write tools below therefore refuse the retired id
+ * (dry runs included) and only build transactions when `config.registrar` names a
+ * different, deployed registrar (e.g. the devnet null_registrar
+ * 3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ, fresh key, 2026-10-06).
  *
  * Self-contained per the modularity contract: addresses are vendored, never the
  * seized pre-incident registrar.
@@ -45,8 +46,9 @@ export const RESOLVE_RPC_MAINNET = "https://solana-rpc.publicnode.com";
 export const REGISTRAR_RETIRED_ERROR =
   `The mainnet .null registrar (${NULL_REGISTRAR_MAINNET}) was retired on ${NULL_REGISTRAR_MAINNET_RETIRED_AT} ` +
   "and can no longer be invoked. Existing .null names still resolve read-only; registration, endpoint " +
-  "updates, stealth-meta updates and transfers are frozen until the registrar relaunch. " +
-  "To write against a different deployed registrar (e.g. devnet), set config.registrar and config.rpcUrl.";
+  "updates, stealth-meta updates and transfers are frozen on mainnet. " +
+  "To write against a different deployed registrar (e.g. the devnet null_registrar " +
+  "3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ), set config.registrar and config.rpcUrl.";
 
 /** True if `registrar` is a retired program that can no longer accept writes. */
 export function isRetiredRegistrar(registrar: string): boolean {
@@ -348,7 +350,7 @@ export function buildRegistrarTools(
   const retired = isRetiredRegistrar(registrar);
   const FROZEN_NOTE =
     ` The mainnet registrar NXgQhepF… was retired ${NULL_REGISTRAR_MAINNET_RETIRED_AT}: against it this tool ` +
-    "refuses (dry runs included) — existing names resolve read-only, writes are frozen until the relaunch. " +
+    "refuses (dry runs included) — existing names resolve read-only, writes to it are frozen. " +
     "Works only when config.registrar names a different deployed registrar (e.g. devnet).";
 
   const registerNullName: ToolDef = {

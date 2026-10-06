@@ -65,10 +65,10 @@ test("no seized or compromised program ID is referenced; RPC is publicnode", () 
   assert.equal(USDC_MINT["solana-mainnet"], "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 });
 
-test("no active receipt anchor is exported; anchoring is unavailable until the redeploy", () => {
+test("no active receipt anchor is exported; this plugin does not anchor", () => {
   assert.equal(onboard.RECEIPT_ANCHOR, undefined);
   assert.equal(onboard.RECEIPT_ANCHOR_DEVNET, undefined);
-  assert.equal(RECEIPT_ANCHORING_UNAVAILABLE, "receipt anchoring is unavailable until the redeploy under a fresh key");
+  assert.equal(RECEIPT_ANCHORING_UNAVAILABLE, "receipt anchoring is not done by this plugin and no anchor program is configured");
   assert.equal(RECEIPT_ANCHOR_MAINNET_RETIRED, "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN");
   assert.equal(NULL_REGISTRAR_MAINNET, "NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np");
 });
@@ -200,7 +200,8 @@ test("buildOnboardPlan: name is validated but registration is frozen; storefront
   assert.equal(withName.name.registrar, NULL_REGISTRAR_MAINNET);
   assert.match(withName.name.status, /retired on 2026-08-29/);
   assert.match(withName.name.status, /resolve read-only/);
-  assert.match(withName.name.status, /frozen until the registrar relaunch/);
+  assert.match(withName.name.status, /frozen on mainnet/);
+  assert.match(withName.name.status, /3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ/);
   assert.equal(withName.name.claim_preview, undefined);
   assert.ok(withName.next_steps.some((s) => /registration is frozen/.test(s) && /read-only/.test(s)));
   // No step tells the agent to run a write tool against the retired registrar.
@@ -232,7 +233,7 @@ test("onboard output carries no LIVE / claim-now / register-on-mainnet text (bot
       assert.doesNotMatch(text, /is live the moment/i);
       assert.doesNotMatch(text, /live on mainnet/i);
       assert.doesNotMatch(text, /register_null_name\(\{/);
-      assert.match(plan.summary, /frozen until the registrar relaunch/);
+      assert.match(plan.summary, /frozen on mainnet/);
       assert.match(plan.summary, /read-only/);
     }
   }
@@ -248,9 +249,14 @@ test("receipts block refuses anchoring on every network and names no anchor targ
     assert.equal(b.anchor_network, null);
     assert.equal(b.mainnet_program_retired, RECEIPT_ANCHOR_MAINNET_RETIRED);
     assert.equal(b.mainnet_retired_at, "2026-07-14");
-    assert.match(b.note, /Receipt anchoring is unavailable until the redeploy under a fresh key/);
+    assert.match(b.note, /Receipt anchoring is not done by this plugin and no anchor program is configured/);
+    assert.match(b.note, /HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs/);
     assert.match(b.note, /retired on 2026-07-14/);
-    assert.doesNotMatch(b.note, /devnet/i);
+    // The only devnet program the note names is the fresh 2026-10-06 receipt_anchor.
+    assert.deepEqual(
+      base58Tokens(b.note).filter((t) => t.length >= 32 && t !== RECEIPT_ANCHOR_MAINNET_RETIRED),
+      ["HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs"],
+    );
     for (const t of base58Tokens(b)) assert.ok(!COMPROMISED_SHA256.has(sha256(t)));
   }
 
@@ -266,8 +272,8 @@ test("receipts block refuses anchoring on every network and names no anchor targ
   });
   assert.deepEqual(mainPlan.receipts, main);
   for (const plan of [devPlan, mainPlan]) {
-    assert.ok(plan.next_steps.some((s) => /receipt anchoring is unavailable until the redeploy under a fresh key/.test(s)));
-    assert.match(plan.summary, /receipt anchoring is unavailable until the redeploy/);
+    assert.ok(plan.next_steps.some((s) => /receipt anchoring is not done by this plugin/.test(s)));
+    assert.match(plan.summary, /receipt anchoring is not done by this plugin/);
     assert.doesNotMatch(JSON.stringify(plan.next_steps) + plan.summary, /anchor[^"]*devnet|on devnet/i);
     for (const t of base58Tokens(plan)) assert.ok(!COMPROMISED_SHA256.has(sha256(t)), "plan names a compromised ID");
   }

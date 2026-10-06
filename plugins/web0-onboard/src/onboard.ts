@@ -10,7 +10,8 @@
  * never signs, never holds a key, never moves funds. The agent's own signer
  * runs the x402-gate. .null registration is frozen on mainnet (registrar
  * NXgQhepF… retired 2026-08-29; existing names resolve read-only), so the plan
- * never tells the agent to register there.
+ * never tells the agent to register there. The name write tools build only
+ * against a registrar set in config (e.g. the devnet null_registrar).
  *
  * Self-contained per the openclaw-skills modularity contract: constants are
  * vendored, never imported from sibling skills. No seized pre-incident IDs.
@@ -21,17 +22,21 @@ import { Connection, PublicKey } from "@solana/web3.js";
 export type SolanaNetwork = "solana-mainnet" | "solana-devnet";
 
 // ── Program IDs (vendored) ───────────────────────────────────────────────────
-// Never add dark_x402_access_gate / dark_nullifier_record — seized pre-incident
-// IDs awaiting clean redeploy under Squads multisig.
+// Never add the pre-incident dark_x402_access_gate / dark_nullifier_record IDs —
+// they are attacker-controlled. Fresh devnet deployments run since 2026-10-06;
+// this plugin does not call them.
 export const DARK_SECP256K1_AUTH = "AqwBbV13AoczhoELwP8oxT3nDqB6MsLWXauNzHkssZ9B";
 
 /**
- * There is no usable receipt_anchor deployment on any network: receipt anchoring
- * is unavailable until the redeploy under a fresh key. The plan never names an
- * anchor target.
+ * This plugin does not anchor receipts and configures no anchor program: the plan's
+ * receipts block sets no anchor target. A devnet receipt_anchor runs at
+ * RECEIPT_ANCHOR_DEVNET (fresh key, 2026-10-06); a client that anchors takes that
+ * program ID explicitly.
  */
 export const RECEIPT_ANCHORING_UNAVAILABLE =
-  "receipt anchoring is unavailable until the redeploy under a fresh key";
+  "receipt anchoring is not done by this plugin and no anchor program is configured";
+/** Devnet receipt_anchor (fresh key, 2026-10-06). Named in the note for reference; never called here. */
+const RECEIPT_ANCHOR_DEVNET = "HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs";
 /** Mainnet receipt_anchor — RETIRED 2026-07-14. Never presented as active. */
 export const RECEIPT_ANCHOR_MAINNET_RETIRED = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN";
 export const RECEIPT_ANCHOR_MAINNET_RETIRED_AT = "2026-07-14";
@@ -39,6 +44,8 @@ export const RECEIPT_ANCHOR_MAINNET_RETIRED_AT = "2026-07-14";
 /** Mainnet .null registrar — RETIRED 2026-08-29; accounts persist (read-only). */
 export const NULL_REGISTRAR_MAINNET = "NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np";
 export const NULL_REGISTRAR_MAINNET_RETIRED_AT = "2026-08-29";
+/** Devnet null_registrar (fresh key, 2026-10-06). The write tools target it only when set as config.registrar. */
+const NULL_REGISTRAR_DEVNET = "3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ";
 
 /** USDC SPL mint per network. */
 export const USDC_MINT: Record<SolanaNetwork, string> = {
@@ -239,8 +246,8 @@ export async function accountExists(connection: Connection, pda: string): Promis
 // ── Plan assembly (pure) ──────────────────────────────────────────────────────
 
 /**
- * Receipts block. The same on every settlement network: anchoring is
- * unavailable, so no anchor program or anchor network is named.
+ * Receipts block. The same on every settlement network: this plugin does not
+ * anchor, so no anchor program or anchor network is set.
  */
 export function buildReceiptsBlock(network: SolanaNetwork): Record<string, unknown> {
   return {
@@ -252,6 +259,8 @@ export function buildReceiptsBlock(network: SolanaNetwork): Record<string, unkno
     mainnet_retired_at: RECEIPT_ANCHOR_MAINNET_RETIRED_AT,
     note:
       `${RECEIPT_ANCHORING_UNAVAILABLE[0].toUpperCase()}${RECEIPT_ANCHORING_UNAVAILABLE.slice(1)}. ` +
+      `A devnet receipt_anchor runs at ${RECEIPT_ANCHOR_DEVNET} (fresh key, 2026-10-06); pass it explicitly ` +
+      "to a client that anchors. " +
       `The mainnet receipt_anchor program (${RECEIPT_ANCHOR_MAINNET_RETIRED}) was retired on ` +
       `${RECEIPT_ANCHOR_MAINNET_RETIRED_AT}; its historical anchors remain readable. ` +
       "x402-gate and x402-pay still derive matching receipt hashes for every sale — keep them.",
@@ -262,9 +271,10 @@ const NAME_STATUS =
   `The mainnet .null registrar (NXgQhepF…) was retired on ${NULL_REGISTRAR_MAINNET_RETIRED_AT}. ` +
   "Existing (legacy) .null names still resolve read-only, so pay_x402 by name keeps working for " +
   "names that already publish an endpoint. New registrations, endpoint updates, stealth-meta " +
-  "updates and transfers are frozen until the registrar relaunch — the register_null_name / " +
-  "set_null_endpoint / set_null_stealth_meta tools refuse against it. Your storefront does not " +
-  "need a name: buyers can pay your x402-gate URL directly.";
+  "updates and transfers are frozen on mainnet — the register_null_name / set_null_endpoint / " +
+  "set_null_stealth_meta tools refuse against the retired registrar and build only against a " +
+  `registrar set in config (the devnet null_registrar ${NULL_REGISTRAR_DEVNET} runs since 2026-10-06). ` +
+  "Your storefront does not need a name: buyers can pay your x402-gate URL directly.";
 
 /**
  * Assemble the consolidated onboard plan. Pure — `identityRegistered` is passed
@@ -318,6 +328,8 @@ export function buildOnboardPlan(opts: {
       },
       note:
         "Configure the x402-gate plugin with x402_gate_config to start charging. " +
+        "On solana-mainnet the gate also needs challengeSecret, replayStorePath + acknowledgeSingleInstance " +
+        "and rpcUrl, or it refuses to serve. " +
         "For multiple price points, run one gate per price (or per route).",
     },
     receipts,
@@ -342,8 +354,8 @@ export function buildOnboardPlan(opts: {
           suggested: `${suggested}.null`,
           registration: "frozen",
           note:
-            `no name set — "${suggested}.null" is a valid label derived from your setup, for when ` +
-            `.null registration reopens. ${NAME_STATUS}`,
+            `no name set — "${suggested}.null" is a valid label derived from your setup, for a ` +
+            `registrar that accepts registrations. ${NAME_STATUS}`,
         }
       : null,
     next_steps: [
@@ -353,13 +365,14 @@ export function buildOnboardPlan(opts: {
         ? "Identity is on-chain — nothing to do."
         : "Optionally bind your identity with the agent-passport plugin (recommended for verifiable counterparties).",
       `Keep the receipt hashes x402-gate and x402-pay derive: ${RECEIPT_ANCHORING_UNAVAILABLE} (the mainnet receipt_anchor program was retired ${RECEIPT_ANCHOR_MAINNET_RETIRED_AT}).`,
-      `.null names: registration is frozen until the registrar relaunch (mainnet registrar retired ${NULL_REGISTRAR_MAINNET_RETIRED_AT}); existing names resolve read-only.` +
-        (fullName ? ` ${fullName} is a valid label to use once registration reopens.` : ""),
+      `.null names: mainnet registration is frozen (mainnet registrar retired ${NULL_REGISTRAR_MAINNET_RETIRED_AT}); existing names resolve read-only. ` +
+        `The name write tools build only against a registrar set in config (devnet null_registrar ${NULL_REGISTRAR_DEVNET}).` +
+        (fullName ? ` ${fullName} is a valid label for such a registrar.` : ""),
     ],
     summary:
       `web0 setup assembled for ${wallet} on ${v.network}: ` +
       `${v.services.length} service(s), payout to your wallet; ${RECEIPT_ANCHORING_UNAVAILABLE}. ` +
-      ".null registration is frozen until the registrar relaunch; existing names resolve read-only.",
+      ".null registration is frozen on mainnet; existing names resolve read-only.",
   };
 }
 
@@ -380,8 +393,8 @@ export function buildOnboardTools(config: Web0OnboardConfig): ToolDef[] {
     description:
       "Set up an agent on web0 in one call: validate inputs, check on-chain identity, " +
       "and return a complete setup — a paid x402 storefront config (funds to your wallet), " +
-      "the receipt-anchoring status (unavailable until the redeploy), and the .null name status (mainnet registration " +
-      "frozen until the registrar relaunch; existing names resolve read-only). Read-only: emits " +
+      "the receipt-anchoring status (this plugin does not anchor), and the .null name status (mainnet registration " +
+      "frozen; existing names resolve read-only). Read-only: emits " +
       "config and checks state; never signs or moves funds.",
     parameters: {
       name: {

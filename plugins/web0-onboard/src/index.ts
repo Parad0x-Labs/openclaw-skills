@@ -48,22 +48,36 @@ const TEMPLATE = buildAll(undefined);
 let memo: ToolList | null = null;
 const runtimeTools = (config: unknown) => (memo ??= buildAll(config as Record<string, unknown> | undefined));
 
+/** Plugin config schema. `openclaw plugins build` generates the manifest
+ *  configSchema (openclaw.plugin.json) from this object, and the host validates
+ *  `plugins.entries.web0-onboard.config` against that manifest before the plugin loads. */
 const ConfigSchema = Type.Object(
   {
-    solanaWallet: Type.Optional(Type.String({ description: "Default payout Solana wallet (base58)." })),
-    name: Type.Optional(Type.String({ description: "Default .null name." })),
-    network: Type.Optional(
-      Type.Union([Type.Literal("solana-mainnet"), Type.Literal("solana-devnet")], { description: "Settlement network." }),
+    solanaWallet: Type.Optional(
+      Type.String({
+        description:
+          "Default payout Solana wallet (base58 public key). Used when a web0_onboard call omits it. Public key only — the plugin never holds a key.",
+      }),
     ),
-    rpcUrl: Type.Optional(Type.String({ description: "RPC override." })),
+    name: Type.Optional(
+      Type.String({ description: 'Default .null name (with or without the .null suffix), e.g. "myagent".' }),
+    ),
+    network: Type.Optional(
+      Type.Union([Type.Literal("solana-mainnet"), Type.Literal("solana-devnet")], {
+        description: "Settlement network. Default: solana-mainnet.",
+      }),
+    ),
+    rpcUrl: Type.Optional(
+      Type.String({ description: "Solana RPC URL override. Defaults to solana-rpc.publicnode.com." }),
+    ),
     registrar: Type.Optional(
       Type.String({
         description:
-          ".null registrar program for the seller write tools. Unset = the mainnet registrar, retired 2026-08-29 (writes refuse).",
+          ".null registrar program id for the seller write tools (register_null_name, set_null_endpoint, set_null_stealth_meta). Unset = the mainnet registrar NXgQhepF…, retired 2026-08-29: names resolve read-only and the write tools refuse. Set to a deployed registrar with a matching rpcUrl to write (e.g. the devnet null_registrar 3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ).",
       }),
     ),
   },
-  { additionalProperties: true },
+  { additionalProperties: false },
 );
 
 const ServiceSchema = Type.Object({
@@ -101,9 +115,10 @@ export default defineToolPlugin({
   name: "web0 Onboard",
   description:
     "Set up an agent on web0 — identity, a paid x402 storefront, the receipt-anchoring status " +
-    "(unavailable until the redeploy), and the .null name status. Sell services for USDC on Solana; funds settle to your own " +
+    "(this plugin does not anchor), and the .null name status. Sell services for USDC on Solana; funds settle to your own " +
     "wallet. Non-custodial. The mainnet .null registrar was retired 2026-08-29: existing names " +
-    "resolve read-only and the name write tools refuse until the relaunch.",
+    "resolve read-only and the name write tools refuse it; they build only against a registrar set in config.",
+  activation: { onStartup: false },
   configSchema: ConfigSchema,
   tools: (tool) =>
     TEMPLATE.map((t) =>

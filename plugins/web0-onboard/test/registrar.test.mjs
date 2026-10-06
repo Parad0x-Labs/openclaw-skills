@@ -97,7 +97,8 @@ test("the mainnet registrar is flagged retired (2026-08-29); other ids are not",
   assert.ok(!isRetiredRegistrar(CUSTOM_REGISTRAR));
   assert.match(REGISTRAR_RETIRED_ERROR, /retired on 2026-08-29/);
   assert.match(REGISTRAR_RETIRED_ERROR, /resolve read-only/);
-  assert.match(REGISTRAR_RETIRED_ERROR, /frozen until the registrar relaunch/);
+  assert.match(REGISTRAR_RETIRED_ERROR, /frozen on mainnet/);
+  assert.match(REGISTRAR_RETIRED_ERROR, /3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ/);
 });
 
 test("validateName mirrors the program rules (4-32, a-z/0-9/-)", () => {

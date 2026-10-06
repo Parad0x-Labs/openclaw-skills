@@ -39,12 +39,13 @@ Returns a consolidated, validated setup:
 The mainnet `.null` registrar (`NXgQhepF…`) was retired on 2026-08-29. Its accounts
 persist, so **existing names still resolve read-only** — `pay_x402("name.null")` keeps
 working for names that already publish an endpoint. Registration, endpoint updates,
-stealth-meta updates and transfers are **frozen until the registrar relaunch**.
+stealth-meta updates and transfers are **frozen on mainnet**.
 
 The seller tools below carry the verified registrar ABI. Against the default (retired
 mainnet) registrar each one refuses up front — dry runs included — with that message.
 They build transactions only when `registrar` in the plugin config names a different
-deployed registrar (e.g. devnet, with a matching `rpcUrl`). The host registers a
+deployed registrar (e.g. the devnet `null_registrar`
+`3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ`, with a matching devnet `rpcUrl`). The host registers a
 signer via `setWeb0Signer(wallet)`; your wallet signs every tx — the plugin never
 holds a key. Each tool takes `dryRun: true` to preview without signing.
 

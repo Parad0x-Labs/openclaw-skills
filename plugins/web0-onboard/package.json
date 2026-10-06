@@ -1,9 +1,12 @@
 {
   "name": "@parad0x_labs/openclaw-web0-onboard",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "OpenClaw plugin — one-call web0 setup: identity, a paid x402 storefront, receipt-anchoring status, and .null name status (legacy registrar read-only)",
   "type": "module",
   "main": "./src/index.ts",
+  "openclaw": {
+    "extensions": ["./src/index.ts"]
+  },
   "files": [
     "src/",
     "openclaw.plugin.json",
