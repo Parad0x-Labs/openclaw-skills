@@ -1,91 +1,97 @@
-# Publish runbook — the agent install loop
+# Publish runbook — openclaw-skills packages
 
-Everything for the agent adoption loop is built and verified. The only thing
-left is `npm publish`, which needs the Parad0x npm login. This is the
-paste-and-go checklist so a publish session is mechanical.
+Publishing needs the Parad0x npm login (scope `@parad0x_labs`, 2FA). Release
+tarballs are built ahead of time from committed sources, so a publish session is
+one `npm publish <file>.tgz --access public` per package.
 
-> npm scope: `@parad0x_labs` (public). Log in once: `npm login`.
+## State (npm registry checked 2026-10-06)
 
-## State today (checked against the npm registry 2026-10-06)
+| Package | npm latest | Repo version | Release tarball | Why a new version |
+|---|---|---|---|---|
+| `@parad0x_labs/openclaw-x402-pay` | 2.0.1 | `skills/x402-pay` 2.0.2 | `parad0x_labs-openclaw-x402-pay-2.0.2.tgz` | 2.0.1 is skipped by OpenClaw 2026.x (`openclaw.compat.pluginApi: "1.x"`); manifest lacks `contracts.tools` and the `repWasmPath`/`repZkeyPath` keys |
+| `@parad0x_labs/openclaw-x402-gate` | 2.0.1 | `skills/x402-gate` 2.0.2 | `parad0x_labs-openclaw-x402-gate-2.0.2.tgz` | same `pluginApi` and `contracts.tools` fix; manifest now declares the zk-rep keys; README lists all four tools |
+| `@parad0x_labs/openclaw-agent-passport` | 0.2.0 | `plugins/agent-passport` 0.2.1 | `parad0x_labs-openclaw-agent-passport-0.2.1.tgz` | 0.2.0 has no `openclaw.extensions` (OpenClaw finds no manifest) and no `contracts.tools` |
+| `@parad0x_labs/openclaw-payment-session` | 0.1.1 | `plugins/payment-session` 0.1.2 | `parad0x_labs-openclaw-payment-session-0.1.2.tgz` | same as agent-passport |
+| `@parad0x_labs/openclaw-web0-onboard` | 0.2.0 | `plugins/web0-onboard` 0.2.1 | `parad0x_labs-openclaw-web0-onboard-0.2.1.tgz` | same as agent-passport, plus the devnet `receipt_anchor` / `null_registrar` text |
+| `@parad0x_labs/openclaw-context-capsule` | 1.7.1 | `skills/context-capsule` 1.7.2 | `parad0x_labs-openclaw-context-capsule-1.7.2.tgz` | 1.7.1 reads settings from the wrong level of the plugin entry, so configured values never reach the engine |
+| `@parad0x_labs/mcp-server` | 0.2.0 | `skills/mcp-server` 0.2.1 | `parad0x_labs-mcp-server-0.2.1.tgz` | refusal text names the devnet `receipt_anchor` and `dark_nullifier_record` |
+| `@parad0x-labs/liquefy-openclaw-plugin` | not published | `plugins/openclaw-plugin` 0.2.0 | `parad0x-labs-liquefy-openclaw-plugin-0.2.0.tgz` | first release; migrated to `defineToolPlugin`. The name uses the `@parad0x-labs` scope, not `@parad0x_labs`: confirm that scope (or rename) before publishing |
 
-| Package | On npm (latest) | This repo | Action |
-|---|---|---|---|
-| `@parad0x_labs/openclaw-context-capsule` | 1.7.0 | `skills/context-capsule` @ 1.7.0 | matches — no action |
-| `@parad0x_labs/null-mcp` | 0.10.0 | private packages repo `packages/null-mcp` | not part of this repo |
-| `@parad0x_labs/mcp-server` | 0.1.1 (deprecated, withdrawn) | `skills/mcp-server` @ 0.2.0 | publish 0.2.0 |
-| `@parad0x_labs/openclaw-x402-pay` | 2.0.0 | `skills/x402-pay` @ 2.0.1 | publish 2.0.1 (README and description strings) |
-| `@parad0x_labs/openclaw-x402-gate` | 2.0.0 | `skills/x402-gate` @ 2.0.1 | publish 2.0.1 (README) |
-| `@parad0x_labs/openclaw-payment-session` | 0.1.0 | `plugins/payment-session` @ 0.1.0 | no action (README/SKILL.md differ only cosmetically) |
-| `@parad0x_labs/openclaw-agent-passport` | 0.1.0 | `plugins/agent-passport` @ 0.2.0 | publish 0.2.0 |
-| `@parad0x_labs/openclaw-web0-onboard` | 0.1.0 | `plugins/web0-onboard` @ 0.2.0 | publish 0.2.0 |
+`@parad0x_labs/null-mcp` and `@parad0x_labs/web0-tip` live in the private packages
+repository, not here.
 
-Release tarballs are built and tested from the committed sources in an isolated
-container (`npm ci --ignore-scripts`, network disconnected for build, test and
-`npm pack`), then published as files: `npm publish <name>-<version>.tgz --access public`.
-None of the release tarballs carries a preinstall, install or postinstall script.
+Release tarballs (built from commit `2554a17`):
 
-Before any future publish, refresh this table against `npm view
-@parad0x_labs/<pkg> version` and each local `package.json`. The publish
-commands below remain the mechanical reference for new versions.
+| Tarball | Files | Size (bytes) | sha256 |
+|---|---:|---:|---|
+| `parad0x_labs-openclaw-x402-pay-2.0.2.tgz` | 16 | 41027 | `b24d5391dc37f282a6df47079feffbfb99278330a3ba2a2b77c5e38b602d7703` |
+| `parad0x_labs-openclaw-x402-gate-2.0.2.tgz` | 15 | 33246 | `6824a5e911a474d6559354cca69be9bb52fe539f25f6301d736d09abbcd0a708` |
+| `parad0x_labs-openclaw-agent-passport-0.2.1.tgz` | 7 | 7087 | `baa145c9f81abb84ba29fc93d787767fe7643a77deeb58b7d805137e11e31f8b` |
+| `parad0x_labs-openclaw-payment-session-0.1.2.tgz` | 8 | 7247 | `3c204602ce777fae9fc82de9901503af07a4d5a8b59e99ae974a84ce72235343` |
+| `parad0x_labs-openclaw-web0-onboard-0.2.1.tgz` | 8 | 17049 | `69963518fdfc475fbb0d67d6435b6fdf408cdbbc131c6c64c151fb4ac7b36747` |
+| `parad0x_labs-openclaw-context-capsule-1.7.2.tgz` | 11 | 31259 | `d3ec7ce9271ebb107b6a9c595e0f774075683ff43183698434ffeb3508e86763` |
+| `parad0x_labs-mcp-server-0.2.1.tgz` | 22 | 31493 | `7195b182f51b976a1899fb576ed2ee158da23c30f4ae01a2b8a1ac105dcd95ca` |
+| `parad0x-labs-liquefy-openclaw-plugin-0.2.0.tgz` | 11 | 13299 | `b3ec230300e0b2a4eb559274737d14aea4ba4f70558c5b712e0390ac1bd3ab03` |
 
-## 1. Publish a new version of mcp-server
+No tarball carries a preinstall, install, postinstall or prepare script.
 
-```bash
-cd <openclaw-skills>/skills/mcp-server
-npm install --ignore-scripts   # never run third-party lifecycle scripts on a host holding the npm token or any key
-npm run build           # tsc → dist/ (verified clean)
-npm publish --access public
-# smoke: npx @parad0x_labs/mcp-server  → should start an MCP stdio server (11 tools: 8 stack + get_scope_status / grant_write_consent / revoke_write_consent)
-```
+## How a release tarball is built
 
-## 2. Publish the x402 skills
+In an isolated container, never on a host that holds keys:
 
-```bash
-cd <openclaw-skills>/skills/x402-pay  && npm publish --access public
-cd <openclaw-skills>/skills/x402-gate && npm publish --access public
-```
+1. `git archive HEAD <package dir>` into the container; `npm ci --ignore-scripts`.
+2. Disconnect the network; `npm run typecheck`, `npm run build`, `npm test`.
+3. `npm pack --ignore-scripts`; copy the `.tgz` out and check it read-only
+   (file list, no lifecycle scripts, no keys, no retired program ID as a default).
+4. The owner publishes the file: `npm publish <file>.tgz --access public`.
 
-(These typecheck clean in CI; they're TS-source plugins consumed by OpenClaw —
-no build step, the `files` field ships `src/`. Any local install of these uses
-`npm install --ignore-scripts`, and the published READMEs tell consumers the same.)
+## OpenClaw host contract (checked against OpenClaw 2026.6.9 and 2026.9.8)
 
-## 2b. Publish agent-passport (on-chain identity plugin)
+A plugin that misses any of these does not load, or loads without tools:
 
-```bash
-cd <openclaw-skills>/plugins/agent-passport
-npm install --ignore-scripts
-npm test                # builds + runs the hermetic passport tests (11 green)
-npm publish --access public
-```
+- `package.json` `openclaw.extensions` points at the entry (`./src/index.ts`, or
+  `./dist/index.js` for packages that ship `dist/`).
+- `openclaw.plugin.json` lists every agent tool in `contracts.tools`. Generate it,
+  do not hand-edit it: `openclaw plugins build --root . --entry src/index.ts`, then
+  `openclaw plugins validate --root . --entry src/index.ts` must print "valid".
+  The generated `configSchema` comes from the TypeBox `configSchema` in the entry.
+- `openclaw.compat.pluginApi`, when present, is a range over the host version
+  (`>=2026.6.1`), not an API major such as `1.x`.
+- Plugin settings live at `plugins.entries.<id>.config`; OpenClaw rejects other
+  keys on the entry. The READMEs show this layout.
+- The tool plugins use `defineToolPlugin` (TypeBox `parameters` + `execute`);
+  context-capsule is a context engine (`definePluginEntry` +
+  `registerContextEngine`).
 
-(Read-only identity plugin: `get_agent_passport` + `verify_agent_identity`, public
-RPC only, no seized program IDs. Ships `src/` like the x402 skills.)
+All eight packages above were loaded with `openclaw plugins inspect <id> --runtime`
+on 2026.6.9 (Node 22) and on 2026.9.8 (Node 24, which that release requires): every
+declared tool registered, `/liquefy_status` registered, context-capsule registered
+its engine, and the only diagnostic was the provenance warning for a path-loaded
+plugin.
 
-## 3. After publishing — flip the catalog to live
+## Test results at `2554a17` (container, network off)
 
-In this repo's `README.md`, change the affected `Install` cells from
-"from source — npm publish pending" to the `npm i` / `npx` command, and update
-`PUBLISH_RUNBOOK.md`'s state table. (One small docs PR.)
+| Package | Result |
+|---|---|
+| x402-pay | 14/14 (`test/prover.test.mts` skips without the circuit artifacts) |
+| x402-gate | 14/14 (`test/rep.test.mts` skips without the circuit artifacts) |
+| agent-passport | 16/16 |
+| payment-session | 12/12 |
+| web0-onboard | 43/43 |
+| context-capsule | all 7 `npm test` stages pass; fixture bench matches `bench/results/latest.json`; `test/plugin-load.test.mjs` passes against the real SDK |
+| mcp-server | 29/29, `test/server.smoke.mjs` 2/2 |
+| liquefy-openclaw-plugin | 10/10 |
 
-## 4. Optional reach — ClawHub listings
+## After publishing
 
-The three OpenClaw plugins (`x402-pay`, `x402-gate`, `context-capsule`) carry
-ClawHub-format `SKILL.md`. List them on ClawHub so claw-family agents discover
-them in-client.
+1. Smoke each plugin in a scratch OpenClaw: `openclaw plugins install
+   @parad0x_labs/openclaw-x402-pay@2.0.2`, then `openclaw plugins inspect x402-pay
+   --runtime` lists its tools. `npx @parad0x_labs/mcp-server` starts the stdio
+   server with 13 tools (Node 22 or later).
+2. Update `evidence/claims.json` (`npm_latest`, `npm_checked_at`,
+   `publication_status`) and run `node scripts/check-claims-registry.mjs --write`.
+3. Refresh the state table above.
 
-## Pre-publish checklist (verified 2026-08-25)
-- [x] mcp-server: `solana-rpc.publicnode.com` is the default RPC (not api.mainnet-beta.solana.com)
-- [x] mcp-server: consent registry is live — `grant_write_consent` actually gates writes (`canSubmitWrite`), seized program IDs guarded
-- [x] x402-pay / x402-gate / agent-passport: `minOpenClawVersion: 2026.6.1` in openclaw.plugin.json
-- [x] All four packages: `npm run typecheck` clean
-- [x] All four packages: `npm test` green (mcp-server 11, x402-pay 7, x402-gate 2, agent-passport 11 = 31)
-- [x] CI: skills-ts.yml runs typecheck + test per module (incl. agent-passport)
-- [ ] Smoke test after publish: `npx @parad0x_labs/mcp-server` starts the stdio server on Node ≥ 22
-
----
-
-**Notes:** the x402 skills are non-custodial by design (the agent's own signer
-holds the key; the skills never hold keys or funds), presenter-bound and
-replay-guarded, mainnet-default, and fail-closed on unsafe mainnet config.
-Consumers should install with `--ignore-scripts` (the deps are pure-JS). An
-independent third-party audit is the bar before scaled real-money volume.
+The x402 skills are non-custodial (the agent's own signer holds the key), presenter-bound
+and replay-guarded, and fail closed on unsafe mainnet config. Install them with
+`--ignore-scripts` on any host that holds a wallet key.
