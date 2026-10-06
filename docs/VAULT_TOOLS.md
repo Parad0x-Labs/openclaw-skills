@@ -333,7 +333,7 @@ make guard-restore DIR=./my-agent                    # Restore your customizatio
 
 ## On-Chain Vault Anchoring (Solana)
 
-Anchor vault integrity proofs on Solana. ~80 bytes of hashes go on-chain via SPL Memo — no data, no keys, just a fingerprint that proves your vault existed in a specific state at a specific time. Anyone with a Solana explorer can verify it.
+Anchor vault integrity proofs on Solana. A 55-byte SPL Memo goes on-chain (`LQFY|<vault hash>|<chain tip>|<key fingerprint>`, each a 16-hex-character / 64-bit prefix): no data, no keys, just a fingerprint. Anyone holding the vault can recompute it and compare it with the memo, which shows the vault was in that state by the transaction's time; the full 32-byte hashes stay in the local proof file.
 
 ```bash
 make vault-proof  VAULT=./vault                   # Compute proof (free, offline)

@@ -5,9 +5,10 @@ liquefy_vault_anchor.py
 On-chain vault integrity anchoring on Solana.
 
 Computes a compact proof of vault state (manifest hashes, audit chain tip,
-file count, total bytes) and optionally anchors it on Solana as a permanent,
-publicly verifiable proof. Anyone with a Solana explorer can confirm your
-data existed at a specific time — without seeing any of it.
+file count, total bytes) and optionally posts a fingerprint of it on Solana as
+an SPL Memo. Anyone holding the vault can recompute the fingerprint and check it
+against the memo, which shows the vault state existed by that transaction's
+time, without the memo revealing the vault contents.
 
 Architecture:
     1. proof   — compute proof locally (free, no wallet needed)
@@ -15,16 +16,21 @@ Architecture:
     3. verify  — verify a local vault matches an on-chain anchor
     4. show    — display an existing anchor from a proof file
 
-On-chain data (80 bytes):
-    - vault_hash:      SHA-256 of all vault file hashes concatenated (32 bytes)
-    - chain_tip:       latest audit chain hash (32 bytes)
-    - key_fingerprint: SHA-256 (first 16 hex) of the vault's Ed25519 signing
-                       *public key* when the vault is signed (publicly
-                       reproducible); falls back to SHA-256 of LIQUEFY_SECRET
-                       for unsigned/legacy vaults.
+On-chain data: a 55-byte ASCII memo "LQFY|<vault_hash16>|<chain_tip16>|<key_fp16>"
+    - vault_hash16:    first 16 hex characters (64 bits) of the SHA-256 of all
+                       vault file hashes concatenated
+    - chain_tip16:     first 16 hex characters (64 bits) of the latest audit
+                       chain hash
+    - key_fp16:        first 16 hex characters of the SHA-256 of the vault's
+                       Ed25519 signing *public key* when the vault is signed
+                       (publicly reproducible); falls back to SHA-256 of
+                       LIQUEFY_SECRET for unsigned/legacy vaults.
+    The full 32-byte hashes stay in the local proof file; only these 64-bit
+    prefixes go on-chain, so the memo binds the vault at prefix strength.
 
-Uses the SPL Memo program (standard, no custom program needed).
-Transaction signature = permanent on-chain receipt.
+Uses the SPL Memo program (standard, no custom program needed). The
+transaction signature identifies the anchor; it stays readable for as long as
+the cluster's history is retrievable from an RPC or archive.
 
 Usage:
     python tools/liquefy_vault_anchor.py proof --vault ./vault

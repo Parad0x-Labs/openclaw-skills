@@ -29,8 +29,10 @@ Every claim below is enforced by code or CI in this repo — none is aspirationa
 - **Compression you can trust by construction.** MRTV (Mandatory Round-Trip
   Verification) re-decompresses and hash-checks every archive before it's accepted.
   A byte-imperfect result is never silently stored — the engine falls back or fails.
-  Measured **103.9x vs zstd-19's 63.8x** on agent-trace fixtures, with golden
-  byte-perfect profiles pinned in CI (`tests/golden/engine_profiles_v1.json`).
+  The committed CI benchmark (`benchmarks/latest_ci.csv`) records **114.7x vs zstd-19's
+  45.3x** on a deliberately repetitive 191 KB JSON fixture and 6.95x vs 5.86x on VPC flow
+  logs, with golden byte-perfect profiles pinned in CI (`tests/golden/engine_profiles_v1.json`).
+  Ratios on other data differ.
 - **A test suite designed to be able to fail.** The red-team harness runs mutation
   invariants that deliberately corrupt engines to prove the suite catches breakage,
   plus crash-recovery campaigns and zero-flake stress runs — wired as a release gate,

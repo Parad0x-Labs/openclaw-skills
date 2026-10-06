@@ -399,25 +399,27 @@ changed**. Verified by:
   (output byte sizes and hashes identical to golden profiles) — full suite green.
 - Red-team harness (`bash tests/redteam/run_all.sh`) — ALL PASS.
 
-Freshly measured ratios on this repo's own target-format fixtures (agent JSONL traces,
-VPC-flow logs; 1.9 MB across 19 files, strict policy, MRTV on):
+Committed CI benchmark: [`benchmarks/latest_ci.csv`](../benchmarks/latest_ci.csv), produced by
+`benchmarks/run_ci_subset.py` (median of 3 runs, committed 2026-02-26) on two fixtures from
+`tests/fixtures/golden_inputs/`. Every row passed the byte-perfect round trip.
 
-| Method | Ratio |
-|---|---|
-| Liquefy (default profile, tracevault pack) | **103.9x** |
-| zstd -19 | 63.8x |
-| zstd -3 | 49.0x |
+| Fixture | Liquefy `default` | Liquefy `ratio` | zstd -19 | zstd -3 |
+|---|---|---|---|---|
+| `generic_json_hyperfriendly_1024` (191,018 bytes of deliberately repetitive JSON) | **114.7x** | 114.7x | 45.3x | 24.3x |
+| `vpcflow_canonical_256` (26,502 bytes of VPC flow logs) | 5.86x | **6.95x** | 5.86x | 4.87x |
 
-Counterpoint: on dense non-target text (docs/schemas/markdown, ~1 MB) Liquefy
-scored 1.02x vs zstd-19 at 1.06x. The engines are format-specialists — feed them agent
-traces and machine logs, not prose.
+Scope: these are two small fixtures, one built to be highly repetitive; ratios on other data, including
+customer agent traces, will differ. The earlier README figure of 103.9x versus 63.8x for zstd -19 (a
+19-file, 1.9 MB set) has no committed result file and is not used. On dense non-target text
+(docs/schemas/markdown, ~1 MB) Liquefy measured 1.02x versus 1.06x for zstd -19 in the same earlier pass,
+also without a committed result file. The engines are format specialists: feed them agent traces and
+machine logs, not prose.
 
-Reproduce locally:
+Reproduce (needs the Python dependencies from `requirements.txt`):
 
 ```bash
-export LIQUEFY_SECRET="<32+ char secret>"
-python tools/tracevault_pack.py tests/fixtures/golden_inputs --org bench --out ./vault/bench --json
-tar -cf - tests/fixtures/golden_inputs | zstd -19 -c -o /dev/null   # compare baseline
+python benchmarks/run_ci_subset.py --out /tmp/latest_ci.csv --runs 3
+python benchmarks/compare.py --baseline benchmarks/latest_ci.csv --latest /tmp/latest_ci.csv
 ```
 
 ---
