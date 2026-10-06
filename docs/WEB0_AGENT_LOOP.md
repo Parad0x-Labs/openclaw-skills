@@ -1,15 +1,15 @@
 # The Web0 agent loop — get paid, and pay, in USDC on Solana
 
 The point of this stack in one walkthrough: your OpenClaw agent **charges other
-agents for its work and pays for theirs, in USDC on Solana mainnet-beta (public
-beta, not yet audited) — non-custodial at every step**. You bring one Solana keypair you control; the skills never hold a
+agents for its work and pays for theirs, in USDC on Solana (public beta; devnet by
+default, mainnet-beta opt-in) — non-custodial at every step**. You bring one Solana keypair you control; the skills never hold a
 key.
 
 | Step | Tool | Where |
 |---|---|---|
 | 1. Pay other agents / paid APIs | [`x402-pay`](../skills/x402-pay) | Solana mainnet-beta |
 | 2. Charge for your agent's work | [`x402-gate`](../skills/x402-gate) | Solana mainnet-beta |
-| 3. Anchor receipts on-chain | `receipt_anchor` | Solana mainnet-beta |
+| 3. Anchor receipts on-chain | `receipt_anchor` | Solana devnet |
 | 4. Keep long sessions cheap | [`context-capsule`](../skills/context-capsule) | npm |
 
 ---
@@ -33,10 +33,11 @@ identical receipt hashes, so the loop reconciles with no shared state.
 
 ## 3 · Anchor receipts on-chain
 
-Anchor a 32-byte hash of anything — a payment receipt, a page manifest — on
-mainnet-beta via `receipt_anchor`
-(`6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN`): a permanent, verifiable trail
-with no data and no keys on-chain.
+Anchor a 32-byte hash of anything — a payment receipt, a page manifest — via
+`receipt_anchor` on devnet (`CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst`): a verifiable
+trail with no data and no keys on-chain. The mainnet deployment
+(`6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN`) anchored receipts June–July 2026 and is
+retired; those historical anchors remain readable.
 
 ## 4 · Keep long sessions cheap
 
@@ -47,30 +48,30 @@ each model call — keeping decisions, errors, IDs, and values while cutting tok
 
 ---
 
-## Your `.null` identity — live
+## Your `.null` identity
 
 Your agent can own a `.null` name on Solana that doubles as its identity and its
-on-chain payment address. The naming layer — registrar, auctions, and pay-by-name
-— runs on **Solana mainnet-beta** (public beta; registrar `NXgQhepF…`, self-serve
-registration rolling out). Each name's record stores its
-x402 endpoint on-chain, so:
+on-chain payment address. The naming layer — registrar and auctions — ran on
+**Solana mainnet-beta** June–August 2026 (registrar `NXgQhepF…`) and is retired: existing
+names still resolve read-only, but names cannot currently be registered, updated or
+transferred. Each name's record stores its x402 endpoint on-chain, so:
 
 ```
-pay_x402("myagent.null")   →  resolve on mainnet-beta → read its x402 endpoint → pay
+pay_x402("myagent.null")   →  resolve the record → read its x402 endpoint → pay
 ```
 
 `x402-pay` accepts a `.null` name directly (it resolves, then pays the published
 endpoint), and `mcp-server`'s `resolve_null` reads any name's owner + endpoint +
-stealth meta. Register a name and publish your endpoint (`UPDATE_ENDPOINT`) to be
-payable by name. Only **max-private** pay (sender + amount hidden) is still rolling
-out on devnet — basic recipient-private pay-by-name is live.
+stealth meta. Recipient-private pay-by-name (payment to a one-time stealth address)
+was demonstrated end to end on devnet; registering new names and publishing
+endpoints (`UPDATE_ENDPOINT`) resume with the relaunch.
 
 ## Notes
 
 - **Non-custodial throughout.** Every skill builds transactions your own wallet
   signs; none holds a key. Spend is capped on the paying side and settles to your
   own wallet on the charging side.
-- **Reach.** Agents resolve and transact on-chain directly — including pay-by-name
-  against the live `.null` registrar.
+- **Reach.** Agents resolve and transact on-chain directly; `.null` resolution reads
+  the legacy mainnet records, which stay readable.
 - **Amounts.** USDC amounts are exact; any storage-cost figures are quoted at
   upload time by the bundler.
