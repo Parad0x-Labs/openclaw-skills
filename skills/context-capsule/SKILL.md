@@ -138,6 +138,6 @@ needs and does not depend on it at runtime.
 
 ---
 
-💜 If Context Capsule is quietly shrinking your token bill, a ⭐ on ClawHub helps
-other agent builders find it.
+If Context Capsule is useful to you, a star on ClawHub helps other agent
+builders find it.
 

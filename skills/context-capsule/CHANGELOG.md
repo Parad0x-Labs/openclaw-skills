@@ -2,7 +2,7 @@
 
 ## 1.7.1
 
-Docs and comments only; the compression code is unchanged from 1.7.0.
+Docs, comments and one internal rename; behaviour is unchanged from 1.7.0.
 
 - **Docs: measured scope.** SKILL.md fidelity figures from private sessions
   (~79% / ~93% key-signal recall) replaced with numbers from a public fixture
@@ -21,6 +21,8 @@ Docs and comments only; the compression code is unchanged from 1.7.0.
   regeneration command in `demo/README.md` now also writes the generated-file
   header. (The demo is repo-only; it is not in the npm package.)
 - **package-lock.json** root version now matches package.json (it said 1.6.0).
+- **Wording.** Internal vault-pattern field renamed `placeholder` -> `replacement`
+  (not exported; no behaviour change); emoji removed from SKILL.md.
 
 ## 1.7.0
 

@@ -30,28 +30,28 @@ import type {
 import type { AgentMessage } from "openclaw/plugin-sdk/agent-harness-runtime";
 import { compressContext, injectCapsule } from "./compression.js";
 
-const VAULT_PATTERNS: Array<{ key: string; re: RegExp; placeholder: string }> = [
+const VAULT_PATTERNS: Array<{ key: string; re: RegExp; replacement: string }> = [
   {
     key: "pem_key",
     re: /-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----[\s\S]*?-----END (?:[A-Z ]+ )?PRIVATE KEY-----/gi,
-    placeholder: "[REDACTED_PRIVATE_KEY]",
+    replacement: "[REDACTED_PRIVATE_KEY]",
   },
-  { key: "anthropic", re: /sk-ant-[A-Za-z0-9\-_]{20,}/g, placeholder: "[REDACTED_ANTHROPIC_KEY]" },
-  { key: "openai_project", re: /sk-proj-[A-Za-z0-9_\-]{40,}/g, placeholder: "[REDACTED_OPENAI_PROJECT_KEY]" },
-  { key: "openai", re: /sk-[A-Za-z0-9]{20,}T3BlbkFJ[A-Za-z0-9]{20,}/g, placeholder: "[REDACTED_OPENAI_KEY]" },
-  { key: "generic_sk", re: /\bsk-[A-Za-z0-9]{20,}\b/g, placeholder: "[REDACTED_SK_KEY]" },
-  { key: "github", re: /gh[pousr]_[A-Za-z0-9_]{36,}/g, placeholder: "[REDACTED_GITHUB_TOKEN]" },
-  { key: "slack", re: /xox[bpras]-[A-Za-z0-9\-]{10,}/g, placeholder: "[REDACTED_SLACK_TOKEN]" },
-  { key: "aws", re: /AKIA[0-9A-Z]{16}/g, placeholder: "[REDACTED_AWS_KEY]" },
-  { key: "stripe", re: /(?:sk|pk)_(?:test|live)_[A-Za-z0-9]{24,}/g, placeholder: "[REDACTED_STRIPE_KEY]" },
-  { key: "jwt", re: /eyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}/g, placeholder: "[REDACTED_JWT]" },
-  { key: "bearer", re: /Bearer\s+[A-Za-z0-9\-._~+/]+=*/gi, placeholder: "[REDACTED_BEARER]" },
+  { key: "anthropic", re: /sk-ant-[A-Za-z0-9\-_]{20,}/g, replacement: "[REDACTED_ANTHROPIC_KEY]" },
+  { key: "openai_project", re: /sk-proj-[A-Za-z0-9_\-]{40,}/g, replacement: "[REDACTED_OPENAI_PROJECT_KEY]" },
+  { key: "openai", re: /sk-[A-Za-z0-9]{20,}T3BlbkFJ[A-Za-z0-9]{20,}/g, replacement: "[REDACTED_OPENAI_KEY]" },
+  { key: "generic_sk", re: /\bsk-[A-Za-z0-9]{20,}\b/g, replacement: "[REDACTED_SK_KEY]" },
+  { key: "github", re: /gh[pousr]_[A-Za-z0-9_]{36,}/g, replacement: "[REDACTED_GITHUB_TOKEN]" },
+  { key: "slack", re: /xox[bpras]-[A-Za-z0-9\-]{10,}/g, replacement: "[REDACTED_SLACK_TOKEN]" },
+  { key: "aws", re: /AKIA[0-9A-Z]{16}/g, replacement: "[REDACTED_AWS_KEY]" },
+  { key: "stripe", re: /(?:sk|pk)_(?:test|live)_[A-Za-z0-9]{24,}/g, replacement: "[REDACTED_STRIPE_KEY]" },
+  { key: "jwt", re: /eyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}/g, replacement: "[REDACTED_JWT]" },
+  { key: "bearer", re: /Bearer\s+[A-Za-z0-9\-._~+/]+=*/gi, replacement: "[REDACTED_BEARER]" },
   {
     key: "credential",
     re: /(?:password|passwd|secret|token|api[_-]?key|access[_-]?key|auth[_-]?token)\s*[=:]\s*["']?([A-Za-z0-9/+=\-_.]{8,})["']?/gi,
-    placeholder: "[REDACTED_SECRET]",
+    replacement: "[REDACTED_SECRET]",
   },
-  { key: "card", re: /\b(?:4\d{3}|5[1-5]\d{2}|3[47]\d{2})[ -]?\d{4}[ -]?\d{4}[ -]?\d{4}\b/g, placeholder: "[REDACTED_CC]" },
+  { key: "card", re: /\b(?:4\d{3}|5[1-5]\d{2}|3[47]\d{2})[ -]?\d{4}[ -]?\d{4}[ -]?\d{4}\b/g, replacement: "[REDACTED_CC]" },
 ];
 
 const DEFAULT_MIN_MESSAGES = 20;
@@ -78,13 +78,13 @@ type CapsuleConfig = {
 function vaultGuard(text: string, label: string): string {
   let result = text;
   const hits: Record<string, number> = {};
-  for (const { key, re, placeholder } of VAULT_PATTERNS) {
+  for (const { key, re, replacement } of VAULT_PATTERNS) {
     re.lastIndex = 0;
     const matches = result.match(re);
     if (matches?.length) {
       hits[key] = (hits[key] ?? 0) + matches.length;
       re.lastIndex = 0;
-      result = result.replace(re, placeholder);
+      result = result.replace(re, replacement);
     }
   }
   const total = Object.values(hits).reduce((a, b) => a + b, 0);
@@ -345,7 +345,7 @@ class ContextCapsuleEngine implements ContextEngine {
   async compact(params: Parameters<typeof delegateCompactionToRuntime>[0]): Promise<CompactResult> {
     // Transcript compaction (shrinking the stored session when it nears the model
     // context) is delegated to OpenClaw's native runtime bridge — the SAME path
-    // the built-in legacy engine uses. A stub that merely returns
+    // the built-in legacy engine uses. An engine that merely returns
     // {compacted:false} is treated as a compaction FAILURE by the CLI/gateway
     // (it throws "transcript compaction failed"), which breaks long sessions.
     return await delegateCompactionToRuntime(params);
