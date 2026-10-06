@@ -26,18 +26,11 @@ export const READ_TOOLS = new Set<string>([
 ]);
 
 /**
- * Pre-incident program IDs whose upgrade authority is under hostile control
- * (deployer key stolen 2026-06-14). NEVER call these.
- */
-export const SEIZED_PROGRAMS = new Set<string>([
-  "EepqzVBNuzCgD6XGiB19pDDhzFG3gUL4z1nabBYxpfjS",
-]);
-
-/**
- * SHA-256 (hex, over the base58 string) of the program IDs whose upgrade
- * authority is held by the stolen deploy key or the attacker key, verified
- * on-chain 2026-10-06. Stored hashed so this package never names them; a
- * program ID matching one of these is refused like a seized one.
+ * SHA-256 (hex, over the base58 string) of every program ID that must never be
+ * called: the IDs whose upgrade authority is held by the stolen deploy key
+ * (stolen 2026-06-14) or the attacker key, verified on-chain 2026-10-06, plus
+ * the gen-1 x402 access gate and the secp256r1 vault. Stored hashed so this
+ * package never names them; a matching program ID is refused as seized.
  */
 export const COMPROMISED_PROGRAM_SHA256 = new Set<string>([
   "03a6663124ee110d7f1549225ae8b66e28f989b1ea306733025ac34f453b1bd3",
@@ -78,19 +71,35 @@ export const COMPROMISED_PROGRAM_SHA256 = new Set<string>([
   "e8d879443447bc9d15426dc46d22cb5786a77b82da869f89abe71e8ef6efc41b",
   "f53b062423ef87023ecb4a2a8caf8743508d1883582d9dc63a0e5764bffa3fc2",
   "f6306c52937d2c382219c615f7f18996c6803ffdccf1df6fcfdcb1fc222392ed",
+  // gen-1 x402 access gate (seized pre-incident)
+  "d8406486dd119717648b5b6e6f4b8b9a044536b3ab95c34da437add15c5cac36",
+  // secp256r1 vault (attacker-controlled)
+  "efa8237fa114259344b44de2f79c21583ec464ffe5186876c35595bbd11983a1",
 ]);
 
-/** True if a program ID is seized or compromised and must never be called. */
-export function isSeizedProgram(programId: string): boolean {
-  return (
-    SEIZED_PROGRAMS.has(programId) ||
-    COMPROMISED_PROGRAM_SHA256.has(createHash("sha256").update(programId).digest("hex"))
-  );
+/** SHA-256 hex digest of a base58 program ID, as held in the denylist. */
+export function programIdDigest(programId: string): string {
+  return createHash("sha256").update(programId).digest("hex");
+}
+
+/**
+ * True if a program ID is seized or compromised and must never be called.
+ * `denylist` defaults to COMPROMISED_PROGRAM_SHA256; tests pass their own.
+ */
+export function isSeizedProgram(
+  programId: string,
+  denylist: ReadonlySet<string> = COMPROMISED_PROGRAM_SHA256,
+): boolean {
+  return denylist.has(programIdDigest(programId));
 }
 
 /** Throw if a program ID is seized or compromised. */
-export function assertNotSeized(programId: string, name: string): void {
-  if (isSeizedProgram(programId)) {
+export function assertNotSeized(
+  programId: string,
+  name: string,
+  denylist: ReadonlySet<string> = COMPROMISED_PROGRAM_SHA256,
+): void {
+  if (isSeizedProgram(programId, denylist)) {
     throw new Error(
       `${name} (${programId}) is a SEIZED program — upgrade authority is under hostile control. ` +
         `Do not call this program.`

@@ -92,7 +92,6 @@ npm start
 | receipt_anchor | mainnet | `6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN` | Retired 2026-07-14 — historical anchors readable, cannot be invoked |
 | .null registrar | mainnet | `NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np` | Retired 2026-08-29 — records readable (`resolve_null`), registration/updates/transfers frozen |
 | dark_secp256k1_auth | mainnet | `AqwBbV13AoczhoELwP8oxT3nDqB6MsLWXauNzHkssZ9B` | Retired — existing bindings readable (`lookup_passport`) |
-| dark_secp256r1_vault | mainnet | `3hbbtjeSrTVYXq6eRwjeofDe2DCPh3n8cfN6kZcQfewi` | Retired — accounts readable |
 | dark_semaphore | mainnet | `Ev7HEFhhKTXk6kS2Y6ssbUcK9C7E6yZ589jJNjUrQV5p` | Retired — accounts readable |
 | null_token | mainnet | `8EeDdvCRmFAzVD4takkBrNNwkeUTUQh4MscRK5Fzpump` | SPL token mint |
 

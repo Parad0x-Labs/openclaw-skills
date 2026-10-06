@@ -29,19 +29,16 @@ import { dirname } from "path";
 //     readable — and the devnet deployment was withdrawn. anchor_receipt and
 //     private_compute anchoring refuse until the redeploy under a fresh key.
 //   - The gen-2 mainnet programs (passport/identity, semaphore, nullifier, proof gates,
-//     dark_secp256r1_vault, …) are retired: program-owned accounts stay readable,
+//     …) are retired: program-owned accounts stay readable,
 //     nothing can be invoked. Tools that touch them are read-only.
 //   - The shielded access gate, nullifier record, reputation gate and commitment
 //     tree deployments were withdrawn; check_nullifier refuses until the redeploy.
-// WARNING: dark_x402_access_gate is a SEIZED pre-incident ID — deployer key F6Fr…
-// stolen 2026-06-14; attacker holds upgrade authority. Do not call it.
+// Attacker-controlled program IDs (the gen-1 x402 access gate, the secp256r1
+// vault, and every ID under the stolen deploy key) are never named here; they
+// are held only as SHA-256 digests in ./scope.ts (isSeizedProgram).
 const PROGRAMS = {
-  // SEIZED — pre-incident; attacker holds upgrade authority. Never called.
-  dark_x402_access_gate: "EepqzVBNuzCgD6XGiB19pDDhzFG3gUL4z1nabBYxpfjS",
   // mainnet, retired 2026-07-14 — historical anchors readable, cannot be invoked
   receipt_anchor_mainnet_retired: RECEIPT_ANCHOR_MAINNET_RETIRED,
-  // mainnet, retired — accounts readable, cannot be invoked
-  dark_secp256r1_vault: "3hbbtjeSrTVYXq6eRwjeofDe2DCPh3n8cfN6kZcQfewi",
   // mainnet, retired — existing ETH↔Solana bindings readable (lookup_passport), cannot be invoked
   dark_secp256k1_auth: "AqwBbV13AoczhoELwP8oxT3nDqB6MsLWXauNzHkssZ9B",
   // mainnet, retired — accounts readable, cannot be invoked
@@ -494,14 +491,6 @@ function getStackStatus(): object {
         status: "retired 2026-08-29 — records readable (resolve_null works), registration/updates/transfers frozen",
         explorer_url: explorerAccount(NULL_REGISTRAR_MAINNET),
         description: "Legacy .null name registrar",
-      },
-      {
-        name: "dark_secp256r1_vault",
-        cluster: "mainnet",
-        address: PROGRAMS.dark_secp256r1_vault,
-        status: retired,
-        explorer_url: explorerAccount(PROGRAMS.dark_secp256r1_vault),
-        description: "WebAuthn / P-256 vault — stored secp256r1 public keys on-chain",
       },
       {
         name: "dark_secp256k1_auth",

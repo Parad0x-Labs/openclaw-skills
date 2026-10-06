@@ -8,12 +8,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Keypair } from "@solana/web3.js";
+import { createHash } from "node:crypto";
 
 import {
   WRITE_TOOLS,
   READ_TOOLS,
-  SEIZED_PROGRAMS,
   COMPROMISED_PROGRAM_SHA256,
+  programIdDigest,
   isSeizedProgram,
   assertNotSeized,
   canSubmitWrite,
@@ -50,10 +51,24 @@ test("canSubmitWrite: allowWrite but neither confirm nor consent → blocked", (
 
 // ── seized-program guard ─────────────────────────────────────────────────────
 
-test("assertNotSeized: throws on every listed seized ID", () => {
-  for (const id of SEIZED_PROGRAMS) {
-    assert.throws(() => assertNotSeized(id, "test_program"), /SEIZED/);
-  }
+// The denylisted IDs are never written in plain text (not even here), so the
+// guard is exercised with a synthetic denylist built from a throwaway key.
+const FAKE_SEIZED = Keypair.generate().publicKey.toBase58();
+const FAKE_DENYLIST = new Set([createHash("sha256").update(FAKE_SEIZED).digest("hex")]);
+
+test("isSeizedProgram: an ID whose digest is denylisted is refused", () => {
+  assert.equal(isSeizedProgram(FAKE_SEIZED, FAKE_DENYLIST), true);
+  assert.equal(isSeizedProgram(Keypair.generate().publicKey.toBase58(), FAKE_DENYLIST), false);
+  // the real denylist does not contain the throwaway key
+  assert.equal(isSeizedProgram(FAKE_SEIZED), false);
+});
+
+test("assertNotSeized: throws for a denylisted ID", () => {
+  assert.throws(() => assertNotSeized(FAKE_SEIZED, "test_program", FAKE_DENYLIST), /SEIZED/);
+});
+
+test("programIdDigest is SHA-256 hex over the base58 string", () => {
+  assert.equal(programIdDigest(FAKE_SEIZED), createHash("sha256").update(FAKE_SEIZED).digest("hex"));
 });
 
 test("assertNotSeized: passes for a non-seized program ID", () => {
@@ -64,19 +79,18 @@ test("assertNotSeized: passes for a non-seized program ID", () => {
   assert.doesNotThrow(() => assertNotSeized(Keypair.generate().publicKey.toBase58(), "random"));
 });
 
-test("the seized pre-incident ID is registered", () => {
-  assert.ok(SEIZED_PROGRAMS.has("EepqzVBNuzCgD6XGiB19pDDhzFG3gUL4z1nabBYxpfjS"));
+test("the gen-1 x402 access gate and the secp256r1 vault are denylisted by digest", () => {
+  assert.ok(COMPROMISED_PROGRAM_SHA256.has("d8406486dd119717648b5b6e6f4b8b9a044536b3ab95c34da437add15c5cac36"));
+  assert.ok(COMPROMISED_PROGRAM_SHA256.has("efa8237fa114259344b44de2f79c21583ec464ffe5186876c35595bbd11983a1"));
 });
 
-test("compromised program IDs are held as 38 SHA-256 digests, never as plain IDs", () => {
-  assert.equal(COMPROMISED_PROGRAM_SHA256.size, 38);
+test("compromised program IDs are held as 40 SHA-256 digests, never as plain IDs", () => {
+  assert.equal(COMPROMISED_PROGRAM_SHA256.size, 40);
   for (const h of COMPROMISED_PROGRAM_SHA256) assert.match(h, /^[0-9a-f]{64}$/);
 });
 
-test("isSeizedProgram matches by digest (plain-text IDs are not stored)", () => {
-  // A digest in the set is matched only via its preimage; an unrelated key is not.
+test("isSeizedProgram: an unrelated key is not refused", () => {
   assert.equal(isSeizedProgram(Keypair.generate().publicKey.toBase58()), false);
-  assert.equal(isSeizedProgram("EepqzVBNuzCgD6XGiB19pDDhzFG3gUL4z1nabBYxpfjS"), true);
 });
 
 // ── tool-set membership ──────────────────────────────────────────────────────
