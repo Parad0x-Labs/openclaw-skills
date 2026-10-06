@@ -24,15 +24,21 @@ import { dirname } from "path";
 // ---------------------------------------------------------------------------
 
 // Current deployments:
-//   - receipt_anchor: there is no usable deployment on any network. The mainnet
+//   - receipt_anchor: this server configures no anchor program. The mainnet
 //     program (6HSRGivd…) was retired 2026-07-14 — its historical anchors stay
-//     readable — and the devnet deployment was withdrawn. anchor_receipt and
-//     private_compute anchoring refuse until the redeploy under a fresh key.
+//     readable. A devnet receipt_anchor runs at HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs
+//     (2026-10-06); this release does not call it, so anchor_receipt and
+//     private_compute anchoring refuse.
 //   - The gen-2 mainnet programs (passport/identity, semaphore, nullifier, proof gates,
 //     …) are retired: program-owned accounts stay readable,
 //     nothing can be invoked. Tools that touch them are read-only.
-//   - The shielded access gate, nullifier record, reputation gate and commitment
-//     tree deployments were withdrawn; check_nullifier refuses until the redeploy.
+//   - The earlier shielded access gate, nullifier record, reputation gate and
+//     commitment tree deployments were withdrawn. Devnet deployments run since
+//     2026-10-06 (dark_x402_access_gate 7P7UpHbX9Nv3dap1DDA4GfLdX2JiNjEVisYvgbuhyNGR,
+//     dark_nullifier_record CPMfXL73v9PDmxyPLTM97bzrNa5eg2AEpsac9XKzX9et,
+//     dark_reputation_gate Cyz7WjdmDTRGBE6kJpDiHUHDkQ5jq2C8BrnHcZm8st2g,
+//     receipt_commitment_tree Fyp5xQxCsUvgrq7wR42eRsL4MaLJML5FZxJtx55HzmFP); this release does
+//     not call them, so check_nullifier refuses.
 // Attacker-controlled program IDs (the gen-1 x402 access gate, the secp256r1
 // vault, and every ID under the stolen deploy key) are never named here; they
 // are held only as SHA-256 digests in ./scope.ts (isSeizedProgram).
@@ -49,9 +55,10 @@ const PROGRAMS = {
   dark_bn254_gate: "GCptvBYF8S6eVYoh15B7WAESc54FUHCpN1Ui6aHeQYZd",
 } as const;
 
-/** Returned by check_nullifier: the nullifier record deployment was withdrawn. */
+/** Returned by check_nullifier: this release does not query a nullifier record program. */
 const NULLIFIER_UNAVAILABLE_ERROR =
-  "check_nullifier is unavailable until the nullifier record program is redeployed under a fresh key — no lookup was made.";
+  "check_nullifier does not query a nullifier record program in this server and none is configured — no lookup was made. " +
+  "A devnet dark_nullifier_record runs at CPMfXL73v9PDmxyPLTM97bzrNa5eg2AEpsac9XKzX9et (2026-10-06).";
 
 const EXPLORER_BASE = "https://explorer.solana.com";
 const DEFAULT_RPC = "https://solana-rpc.publicnode.com";
@@ -212,8 +219,8 @@ async function x402GetQuote(
 }
 
 /**
- * receipt_anchor has no usable deployment, so this never signs or sends. It
- * validates the hash and returns a clear refusal that echoes it back.
+ * This server configures no receipt_anchor program, so this never signs or
+ * sends. It validates the hash and returns a clear refusal that echoes it back.
  */
 function anchorReceipt(receiptHashHex: string): object {
   if (!/^[0-9a-fA-F]{64}$/.test(receiptHashHex)) {
@@ -296,7 +303,7 @@ async function lookupPassport(
   };
 }
 
-/** The nullifier record deployment was withdrawn: validate the input, refuse the lookup. */
+/** No nullifier record program is configured: validate the input, refuse the lookup. */
 function checkNullifier(nullifier: string): object {
   const s = nullifier.trim();
   let hex: string;
@@ -526,15 +533,15 @@ function getStackStatus(): object {
     ],
     receipt_anchoring: {
       status: "unavailable",
-      note: "Receipt anchoring is unavailable until the redeploy under a fresh key. anchor_receipt and private_compute still compute hashes locally; nothing is sent.",
+      note: "This server does not anchor and configures no anchor program. A devnet receipt_anchor runs at HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs (2026-10-06); pass it explicitly to a client that anchors. anchor_receipt and private_compute still compute hashes locally; nothing is sent.",
     },
     shielded_access: {
       status: "unavailable",
-      note: "The shielded x402 access gate and nullifier record deployments were withdrawn; check_nullifier refuses until the redeploy under a fresh key.",
+      note: "This server does not call the shielded x402 access gate or the nullifier record, and check_nullifier refuses. Devnet deployments run since 2026-10-06: dark_x402_access_gate 7P7UpHbX9Nv3dap1DDA4GfLdX2JiNjEVisYvgbuhyNGR, dark_nullifier_record CPMfXL73v9PDmxyPLTM97bzrNa5eg2AEpsac9XKzX9et.",
     },
     private_reputation_stack: {
       status: "unavailable",
-      note: "The reputation gate and commitment tree deployments were withdrawn pending a redeploy under a fresh key.",
+      note: "This server does not call the reputation gate or the commitment tree. Devnet deployments run since 2026-10-06: dark_reputation_gate Cyz7WjdmDTRGBE6kJpDiHUHDkQ5jq2C8BrnHcZm8st2g, receipt_commitment_tree Fyp5xQxCsUvgrq7wR42eRsL4MaLJML5FZxJtx55HzmFP.",
     },
     dark_null: { status: "devnet", note: "Canonical Dark NULL runs on devnet." },
     x402_payments: {
@@ -594,7 +601,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "anchor_receipt",
         description:
-          "Anchor a 32-byte receipt hash on Solana via receipt_anchor. Receipt anchoring is unavailable until the redeploy under a fresh key: the tool validates the hash and returns a clear refusal; nothing is signed or sent. The mainnet receipt_anchor was retired 2026-07-14; its historical anchors remain readable.",
+          "Anchor a 32-byte receipt hash on Solana via receipt_anchor. Receipt anchoring is not done by this server and no default anchor program is configured: the tool validates the hash and returns a clear refusal; nothing is signed or sent. A devnet receipt_anchor runs at HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs (2026-10-06); pass it explicitly to a client that anchors. The mainnet receipt_anchor was retired 2026-07-14; its historical anchors remain readable.",
         inputSchema: {
           type: "object",
           properties: {
@@ -679,7 +686,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "check_nullifier",
         description:
-          "Check whether a privacy-proof nullifier has already been spent (single-use enforcement). Unavailable until the nullifier record program is redeployed under a fresh key: the tool validates the nullifier and returns a clear refusal; no lookup is made.",
+          "Check whether a privacy-proof nullifier has already been spent (single-use enforcement). This server does not query a nullifier record program: the tool validates the nullifier and returns a clear refusal; no lookup is made. A devnet dark_nullifier_record runs at CPMfXL73v9PDmxyPLTM97bzrNa5eg2AEpsac9XKzX9et (2026-10-06).",
         inputSchema: {
           type: "object",
           properties: {
@@ -693,7 +700,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "get_stack_status",
-        description: "Get the current status of Parad0x Labs programs: retired mainnet programs (readable), unavailable services pending redeploy, and x402 settlement",
+        description: "Get the current status of Parad0x Labs programs: retired mainnet programs (readable), the devnet deployments this server does not call, and x402 settlement",
         inputSchema: {
           type: "object",
           properties: {},
@@ -702,7 +709,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "private_compute",
         description:
-          "Run a computation via an executor endpoint without exposing plaintext inputs. Agent encrypts locally, sends ciphertext, executor returns encrypted result + result hash. Executor never sees plaintext. With anchor:true the (input_hash, result_hash) commitment is computed locally; the on-chain anchor is unavailable until the receipt_anchor redeploy under a fresh key.",
+          "Run a computation via an executor endpoint without exposing plaintext inputs. Agent encrypts locally, sends ciphertext, executor returns encrypted result + result hash. Executor never sees plaintext. With anchor:true the (input_hash, result_hash) commitment is computed locally; the on-chain anchor is refused because this server configures no receipt_anchor program.",
         inputSchema: {
           type: "object",
           properties: {
@@ -720,7 +727,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             anchor: {
               type: "boolean",
-              description: "If true, compute the (input_hash, result_hash) commitment. The on-chain anchor is refused until the receipt_anchor redeploy under a fresh key.",
+              description: "If true, compute the (input_hash, result_hash) commitment. The on-chain anchor is refused: this server configures no receipt_anchor program.",
             },
           },
           required: ["plaintext_input", "executor_endpoint"],

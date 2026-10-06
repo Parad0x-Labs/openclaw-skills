@@ -4,8 +4,8 @@ solders/solana install needed).
 
 Run from the plugin dir:  python3 -m unittest discover -s tests -v
 
-Proves receipt anchoring refuses cleanly: there is no usable receipt_anchor
-deployment, so archive_session(anchor=True) raises ReceiptAnchorUnavailableError
+Proves receipt anchoring refuses cleanly: the module has no default
+receipt_anchor program, so archive_session(anchor=True) raises ReceiptAnchorUnavailableError
 before the session is fetched or anything is written, and the module names no
 anchor target. The session commitment and the instruction encoder still work
 locally.
@@ -28,7 +28,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import magicblock_archive as mba  # noqa: E402
 
 RETIRED_MAINNET_ANCHOR = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN"
-UNAVAILABLE = "receipt anchoring is unavailable until the redeploy under a fresh key"
+UNAVAILABLE = "receipt anchoring is not done by this skill and no default anchor program is configured"
+DEVNET_ANCHOR = "HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs"
 # SHA-256 of the withdrawn devnet receipt_anchor id (held hashed, never named).
 WITHDRAWN_ANCHOR_SHA256 = "b851c1d6562bf9e70e2033a2db83d21fc5b249eab440a751d5638b285a4596c0"
 
@@ -47,7 +48,8 @@ class DeploymentConstants(unittest.TestCase):
 
     def test_unavailable_error_wording(self):
         self.assertIn(UNAVAILABLE, mba.RECEIPT_ANCHOR_UNAVAILABLE_ERROR)
-        self.assertNotIn("devnet", mba.RECEIPT_ANCHOR_UNAVAILABLE_ERROR.lower())
+        self.assertIn(DEVNET_ANCHOR, mba.RECEIPT_ANCHOR_UNAVAILABLE_ERROR)
+        self.assertIn("pass it explicitly", mba.RECEIPT_ANCHOR_UNAVAILABLE_ERROR)
         self.assertTrue(issubclass(mba.ReceiptAnchorUnavailableError, RuntimeError))
 
     def test_instruction_layout_is_42_bytes(self):

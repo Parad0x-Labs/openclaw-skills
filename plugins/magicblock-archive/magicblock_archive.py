@@ -7,10 +7,11 @@ archives ER session logs: compresses, optionally encrypts, hashes, and computes 
 32-byte session commitment for the receipt_anchor accumulator. x402 session playback
 pricing is included.
 
-Receipt anchoring is unavailable until the redeploy under a fresh key: there is no
-usable receipt_anchor deployment on any network. ``archive_session(anchor=True)``
-raises ``ReceiptAnchorUnavailableError`` before any session is fetched or anything is
-written. The mainnet receipt_anchor was retired 2026-07-14; its historical anchors
+This module does not anchor receipts on-chain and names no default anchor program.
+``archive_session(anchor=True)`` raises ``ReceiptAnchorUnavailableError`` before any
+session is fetched or anything is written. A devnet receipt_anchor runs at
+HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs (2026-10-06); pass it explicitly to a client that
+anchors. The mainnet receipt_anchor was retired 2026-07-14; its historical anchors
 remain readable on-chain.
 """
 
@@ -33,8 +34,10 @@ RECEIPT_ANCHOR_MAINNET_RETIRED = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN"
 RECEIPT_ANCHOR_MAINNET_RETIRED_ON = "2026-07-14"
 
 RECEIPT_ANCHOR_UNAVAILABLE_ERROR = (
-    "receipt anchoring is unavailable until the redeploy under a fresh key — nothing "
-    "was fetched, written or sent. The mainnet receipt_anchor "
+    "receipt anchoring is not done by this skill and no default anchor program is "
+    "configured — nothing was fetched, written or sent. A devnet receipt_anchor runs at "
+    "HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs (2026-10-06); pass it explicitly to a client "
+    "that anchors. The mainnet receipt_anchor "
     f"({RECEIPT_ANCHOR_MAINNET_RETIRED}) was retired {RECEIPT_ANCHOR_MAINNET_RETIRED_ON}; "
     "its historical anchors remain readable. Call archive_session(anchor=False) to "
     "archive, and session_commitment() to compute the 32-byte commitment locally."
@@ -42,7 +45,7 @@ RECEIPT_ANCHOR_UNAVAILABLE_ERROR = (
 
 
 class ReceiptAnchorUnavailableError(RuntimeError):
-    """Raised whenever on-chain anchoring is requested: no receipt_anchor is usable."""
+    """Raised whenever on-chain anchoring is requested: this skill does not anchor."""
 
 
 # Hour-bucket accumulator parameters (mirror programs/receipt_anchor processor.rs).
@@ -202,8 +205,8 @@ def archive_session(
         32-byte key for AES-256-GCM encryption.  If ``None`` the archive is
         stored unencrypted.
     anchor:
-        On-chain anchoring is unavailable until the receipt_anchor redeploy
-        under a fresh key: ``True`` raises :class:`ReceiptAnchorUnavailableError`
+        This skill does not anchor on-chain and names no default anchor
+        program: ``True`` raises :class:`ReceiptAnchorUnavailableError`
         up front, before the session is fetched or anything is written. Use
         :func:`session_commitment` to compute the commitment locally.
     er_rpc_url:
@@ -216,7 +219,7 @@ def archive_session(
     dict
         ``session_id``, ``action_count``, ``compressed_bytes``,
         ``archive_hash``, ``archive_path`` and ``session_commitment`` (hex of
-        the 32-byte commitment, ready to anchor after the redeploy).
+        the 32-byte commitment, ready to pass to a client that anchors).
     """
     if anchor:
         # Refuse before any fetch / compress / write.
@@ -394,8 +397,9 @@ def _aes256_gcm_decrypt(key: bytes, blob: bytes) -> bytes:
 def session_commitment(session_id: str, archive_hash: str) -> bytes:
     """Return the 32-byte commitment to anchor on-chain for a session.
 
-    Computed locally; on-chain anchoring is unavailable until the receipt_anchor
-    redeploy under a fresh key.
+    Computed locally. This module does not anchor it; a client that anchors
+    takes an explicit receipt_anchor program ID (devnet:
+    HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs).
 
     Binds the session id and the archive's SHA-256 so the anchored value is
     reproducible by anyone who knows both::

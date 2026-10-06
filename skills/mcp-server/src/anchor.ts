@@ -2,16 +2,16 @@
  * receipt_anchor instruction encoder + availability gate (host-free, byte-exact,
  * unit-tested).
  *
- * Availability: there is currently NO usable receipt_anchor deployment on any
- * network. The mainnet program (6HSRGivd…) was retired 2026-07-14 — its
- * historical anchors (June–July 2026) remain readable on-chain — and the devnet
- * deployment was withdrawn. Receipt anchoring is unavailable until the program
- * is redeployed under a fresh key: anchor_receipt and private_compute refuse
- * with RECEIPT_ANCHOR_UNAVAILABLE_ERROR and send nothing. Receipt hashes and
- * commitments are still computed locally.
+ * Availability: this server does not anchor and configures no default
+ * receipt_anchor program. The mainnet program (6HSRGivd…) was retired
+ * 2026-07-14 — its historical anchors (June–July 2026) remain readable
+ * on-chain. A devnet receipt_anchor runs at HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs
+ * (2026-10-06); this release does not call it. anchor_receipt and
+ * private_compute refuse with RECEIPT_ANCHOR_UNAVAILABLE_ERROR and send
+ * nothing. Receipt hashes and commitments are still computed locally.
  *
- * The encoder below stays so the client is ready for the redeploy. It takes the
- * program id as an explicit argument and has no default target.
+ * The encoder below takes the program id as an explicit argument and has no
+ * default target.
  *
  * Instruction ABI (receipt_anchor):
  *   data = [0x01 version][flags][32-byte hash]( [u64 LE bucket_id] )
@@ -33,7 +33,9 @@ export const RECEIPT_ANCHOR_MAINNET_RETIRED_ON = "2026-07-14";
 
 /** Returned (and thrown) whenever anchoring is requested. Nothing is signed or sent. */
 export const RECEIPT_ANCHOR_UNAVAILABLE_ERROR =
-  "receipt anchoring is unavailable until the redeploy under a fresh key — no transaction was sent. " +
+  "receipt anchoring is not done by this server and no default anchor program is configured — " +
+  "no transaction was sent. A devnet receipt_anchor runs at HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs (2026-10-06); " +
+  "pass it explicitly to a client that anchors. " +
   `The mainnet receipt_anchor (${RECEIPT_ANCHOR_MAINNET_RETIRED}) was retired ${RECEIPT_ANCHOR_MAINNET_RETIRED_ON}; ` +
   "its historical anchors remain readable. The receipt hash is still computed locally.";
 

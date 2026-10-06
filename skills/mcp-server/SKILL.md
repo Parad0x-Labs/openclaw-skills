@@ -23,7 +23,7 @@ Cursor, Windsurf, and any MCP-compatible agent runtime.
 | Tool | Does |
 |---|---|
 | `x402_get_quote` | Get a payment quote for an x402-gated API endpoint |
-| `anchor_receipt` | Validate a 32-byte receipt hash; refuses with "receipt anchoring is unavailable until the redeploy under a fresh key" and sends nothing |
+| `anchor_receipt` | Validate a 32-byte receipt hash; refuses with "receipt anchoring is not done by this server and no default anchor program is configured", names the devnet `receipt_anchor` for explicit use, and sends nothing |
 | `lookup_passport` | Read whether an ETH address or Solana wallet has a Dark Passport binding on the legacy mainnet program (retired; existing bindings readable) |
 | `build_outcome_receipt` | Build a signed outcome receipt with PnL, accuracy, or delivery result |
 | `compress_receipts` | Compress a batch of receipts (Liquefy format) |

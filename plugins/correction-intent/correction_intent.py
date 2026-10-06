@@ -186,7 +186,7 @@ def correction_chain_receipt(state: ActiveState, session_id: str = "") -> dict:
         "session_id": session_id,
         "corrections": chain,
         "chain_root": chain_root,
-        "anchor_note": "receipt anchoring is unavailable until the redeploy under a fresh key; keep chain_root to anchor later",
+        "anchor_note": "this skill does not anchor; a devnet receipt_anchor runs at HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs (2026-10-06): pass chain_root and that program ID explicitly to a client that anchors",
     }
 
 

@@ -8,8 +8,8 @@
  * guard (rather than the no-keypair dry-run branch) — proving the guard blocks.
  *
  * Also proves receipt anchoring refuses cleanly: anchor_receipt and
- * private_compute return "unavailable until the redeploy under a fresh key",
- * even with writes enabled and a keypair present, and never contact an RPC
+ * private_compute return "not done by this server and no default anchor program
+ * is configured", even with writes enabled and a keypair present, and never contact an RPC
  * (checked against a local fake JSON-RPC server — no network). check_nullifier
  * refuses the same way, and get_stack_status lists no seized program.
  */
@@ -26,7 +26,9 @@ import { isSeizedProgram } from "../dist/scope.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const RETIRED_MAINNET_ANCHOR = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN";
-const UNAVAILABLE = /receipt anchoring is unavailable until the redeploy under a fresh key/;
+const UNAVAILABLE = /receipt anchoring is not done by this server and no default anchor program is configured/;
+const DEVNET_ANCHOR = "HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs";
+const DEVNET_NULLIFIER_RECORD = "CPMfXL73v9PDmxyPLTM97bzrNa5eg2AEpsac9XKzX9et";
 const serverPath = join(here, "..", "dist", "index.js");
 
 /** Minimal newline-delimited JSON-RPC client over a child process's stdio. */
@@ -139,14 +141,17 @@ test("server boots, lists consent tools, gates writes (read-only scope)", async 
     const nul = toolResult(
       await request("tools/call", { name: "check_nullifier", arguments: { nullifier: "1".repeat(64) } }),
     );
-    assert.match(nul.error, /unavailable until the nullifier record program is redeployed under a fresh key/);
+    assert.match(nul.error, /does not query a nullifier record program in this server and none is configured/);
+    assert.ok(nul.error.includes(DEVNET_NULLIFIER_RECORD));
     assert.equal(nul.available, false);
     assert.ok(!("spent" in nul) && !("record_pda" in nul));
 
-    // tool descriptions advertise no devnet anchor target
+    // the tool description names the devnet program for explicit use; the tool
+    // itself takes no program or RPC input
     const anchorTool = list.result.tools.find((t) => t.name === "anchor_receipt");
     assert.match(anchorTool.description, new RegExp(UNAVAILABLE.source, "i"));
-    assert.doesNotMatch(anchorTool.description, /devnet/i);
+    assert.ok(anchorTool.description.includes(DEVNET_ANCHOR));
+    assert.equal(anchorTool.inputSchema.properties.program_id, undefined);
     assert.equal(anchorTool.inputSchema.properties.rpc_url, undefined);
 
     // get_stack_status: no live anchor, no seized address, retired mainnet programs say so.

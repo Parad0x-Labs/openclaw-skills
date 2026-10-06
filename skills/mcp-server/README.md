@@ -17,9 +17,9 @@ under a fresh key (2026-10-06; see [Programs](#programs)); this release does not
 | `build_outcome_receipt` | Build a signed outcome receipt with PnL, accuracy, or delivery result |
 | `compress_receipts` | Compress a batch of receipts (zlib deflate; Liquefy-format demo — the production columnar codec targets ~83x) |
 | `resolve_null` | Resolve a `.null` name (read-only) on the legacy mainnet registrar — records readable, registration/updates frozen |
-| `check_nullifier` | Validate a privacy-proof nullifier; the lookup is unavailable until the nullifier record program is redeployed under a fresh key |
+| `check_nullifier` | Validate a privacy-proof nullifier. This server does not query a nullifier record program: the tool returns a clear refusal and makes no lookup. A devnet `dark_nullifier_record` runs at `CPMfXL73v9PDmxyPLTM97bzrNa5eg2AEpsac9XKzX9et` |
 | `private_compute` | Encrypt locally, send ciphertext to an executor, return input/result hashes; `anchor:true` computes the commitment locally (this server does not anchor on-chain) |
-| `get_stack_status` | Program addresses and their current status (retired mainnet programs, services awaiting redeploy, x402 settlement) |
+| `get_stack_status` | Program addresses and their current status (retired mainnet programs, the devnet deployments this server does not call, x402 settlement) |
 | `create_wallet` | Generate a new Solana keypair file on this machine (preview unless `confirm:true`); returns only the public key and path, never the secret |
 | `get_scope_status` / `grant_write_consent` / `revoke_write_consent` | Show and manage the per-session write consent for `anchor_receipt` and `private_compute` |
 
@@ -92,6 +92,9 @@ npm start
 | receipt_anchor | mainnet | `6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN` | Retired 2026-07-14 — historical anchors readable, cannot be invoked |
 | receipt_anchor | devnet | `HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs` | Devnet, fresh key (2026-10-06). Not called by this server; pass it explicitly to a client that anchors |
 | dark_nullifier_record | devnet | `CPMfXL73v9PDmxyPLTM97bzrNa5eg2AEpsac9XKzX9et` | Devnet, fresh key (2026-10-06). Not called by this server |
+| dark_x402_access_gate | devnet | `7P7UpHbX9Nv3dap1DDA4GfLdX2JiNjEVisYvgbuhyNGR` | Devnet, fresh key (2026-10-06). Not called by this server |
+| dark_reputation_gate | devnet | `Cyz7WjdmDTRGBE6kJpDiHUHDkQ5jq2C8BrnHcZm8st2g` | Devnet, fresh key (2026-10-06). Not called by this server |
+| receipt_commitment_tree | devnet | `Fyp5xQxCsUvgrq7wR42eRsL4MaLJML5FZxJtx55HzmFP` | Devnet, fresh key (2026-10-06). Not called by this server |
 | .null registrar | mainnet | `NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np` | Retired 2026-08-29 — records readable (`resolve_null`), registration/updates/transfers frozen |
 | dark_secp256k1_auth | mainnet | `AqwBbV13AoczhoELwP8oxT3nDqB6MsLWXauNzHkssZ9B` | Retired — existing bindings readable (`lookup_passport`) |
 | dark_semaphore | mainnet | `Ev7HEFhhKTXk6kS2Y6ssbUcK9C7E6yZ589jJNjUrQV5p` | Retired — accounts readable |
@@ -101,7 +104,9 @@ This server does not anchor. `anchor_receipt` and `private_compute` (`anchor:tru
 compute hashes locally and return a clear refusal; nothing is signed or sent.
 `check_nullifier` refuses the same way. A devnet `receipt_anchor` is available at
 `HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs`; pass it explicitly to a client that anchors (for example
-dna-x402 `receipt-dag`). The refusal text predates the 2026-10-06 devnet redeploy.
+dna-x402 `receipt-dag`). The refusal messages name the devnet `receipt_anchor` and
+`dark_nullifier_record` addresses; the server takes no program ID for either. Devnet evidence:
+[dna-x402 `evidence/devnet-programs-2026-10-06.json`](https://github.com/Parad0x-Labs/dna-x402/blob/main/evidence/devnet-programs-2026-10-06.json).
 
 Canonical Dark NULL runs on devnet. x402 USDC payments are plain SPL transfers and are
 unaffected by the retired programs — devnet by default, mainnet opt-in.

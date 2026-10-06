@@ -1,7 +1,7 @@
 /**
  * Byte-exact tests for the receipt_anchor encoder (../dist/anchor.js) and the
- * availability gate: receipt anchoring is unavailable until the redeploy under a
- * fresh key, so no default target exists. Hermetic — no network.
+ * availability gate: this server configures no receipt_anchor program, so no
+ * default target exists. Hermetic — no network.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -91,15 +91,17 @@ test("no receipt_anchor write target is exported; the module names no compromise
   assert.equal(RECEIPT_ANCHOR_MAINNET_RETIRED, RETIRED_MAINNET);
 });
 
-test("unavailable error says anchoring waits for the redeploy and nothing is sent", () => {
-  assert.match(RECEIPT_ANCHOR_UNAVAILABLE_ERROR, /receipt anchoring is unavailable until the redeploy under a fresh key/);
+test("unavailable error says no anchor program is configured and nothing is sent", () => {
+  assert.match(RECEIPT_ANCHOR_UNAVAILABLE_ERROR, /receipt anchoring is not done by this server and no default anchor program is configured/);
   assert.match(RECEIPT_ANCHOR_UNAVAILABLE_ERROR, /no transaction was sent/);
-  assert.doesNotMatch(RECEIPT_ANCHOR_UNAVAILABLE_ERROR, /devnet/i);
+  // names the devnet program for explicit use by a client that anchors
+  assert.match(RECEIPT_ANCHOR_UNAVAILABLE_ERROR, /HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs/);
+  assert.match(RECEIPT_ANCHOR_UNAVAILABLE_ERROR, /pass it explicitly/);
 });
 
 test("buildAnchorIx refuses the retired mainnet program id", () => {
   assert.throws(
     () => buildAnchorIx({ payer: PAYER, receiptHashHex: HASH, programId: RETIRED_MAINNET, bucketId: 1n }),
-    /unavailable until the redeploy under a fresh key/,
+    /no default anchor program is configured/,
   );
 });
