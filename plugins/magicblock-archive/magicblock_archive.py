@@ -3,14 +3,15 @@ magicblock_archive.py — MagicBlock Ephemeral Rollup session archiving plugin f
 
 Gap filled: MagicBlock Ephemeral Rollups commit final state to Solana but produce no durable
 transaction log. Sessions are described as "auditable" but nothing is archived. This plugin
-archives ER session logs: compresses, optionally encrypts, hashes, and folds a 32-byte
-session commitment into the on-chain receipt_anchor accumulator on Solana devnet. x402
-session playback pricing is included.
+archives ER session logs: compresses, optionally encrypts, hashes, and computes a
+32-byte session commitment for the receipt_anchor accumulator. x402 session playback
+pricing is included.
 
-Anchoring targets devnet only. The mainnet receipt_anchor was retired 2026-07-14 and
-cannot be invoked; a mainnet RPC is refused with ``RetiredProgramError`` before any
-session is fetched or any transaction is built. Historical mainnet anchors remain
-readable on-chain.
+Receipt anchoring is unavailable until the redeploy under a fresh key: there is no
+usable receipt_anchor deployment on any network. ``archive_session(anchor=True)``
+raises ``ReceiptAnchorUnavailableError`` before any session is fetched or anything is
+written. The mainnet receipt_anchor was retired 2026-07-14; its historical anchors
+remain readable on-chain.
 """
 
 from __future__ import annotations
@@ -19,7 +20,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-from typing import Optional
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -27,40 +27,23 @@ from typing import Optional
 
 MAGICBLOCK_RPC: str = os.environ.get("MAGICBLOCK_RPC", "https://devnet.magicblock.app")
 
-# receipt_anchor program (web0/Parad0x) on Solana devnet — folds a 32-byte session
-# commitment into a rolling on-chain accumulator: root_n = sha256(root_{n-1} || anchor_n).
-RECEIPT_ANCHOR_PROGRAM = "CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst"
-
 # The mainnet receipt_anchor — retired 2026-07-14. Never invoked; its historical
 # anchors (June–July 2026) remain readable on-chain.
 RECEIPT_ANCHOR_MAINNET_RETIRED = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN"
 RECEIPT_ANCHOR_MAINNET_RETIRED_ON = "2026-07-14"
 
-# Devnet RPC used for anchoring (override with SOLANA_ANCHOR_RPC).
-ANCHOR_RPC_DEVNET = "https://api.devnet.solana.com"
-SOLANA_ANCHOR_RPC: str = os.environ.get("SOLANA_ANCHOR_RPC", ANCHOR_RPC_DEVNET)
-
-# Cluster genesis hashes — the authoritative cluster check before submitting.
-GENESIS_HASH_MAINNET = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d"
-GENESIS_HASH_DEVNET = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG"
-
-# Hosts that serve Solana mainnet without saying "mainnet" in the URL.
-_KNOWN_MAINNET_HOSTS = frozenset({
-    "solana-rpc.publicnode.com",
-    "solana.publicnode.com",
-    "solana.api.onfinality.io",
-})
-
-MAINNET_ANCHOR_RETIRED_ERROR = (
-    f"receipt_anchor on Solana mainnet ({RECEIPT_ANCHOR_MAINNET_RETIRED}) was retired "
-    f"{RECEIPT_ANCHOR_MAINNET_RETIRED_ON} and cannot be invoked — no mainnet anchor "
-    f"transaction is sent. Anchoring runs on devnet ({RECEIPT_ANCHOR_PROGRAM}); use a "
-    f"devnet RPC (default {ANCHOR_RPC_DEVNET}). Historical mainnet anchors remain readable."
+RECEIPT_ANCHOR_UNAVAILABLE_ERROR = (
+    "receipt anchoring is unavailable until the redeploy under a fresh key — nothing "
+    "was fetched, written or sent. The mainnet receipt_anchor "
+    f"({RECEIPT_ANCHOR_MAINNET_RETIRED}) was retired {RECEIPT_ANCHOR_MAINNET_RETIRED_ON}; "
+    "its historical anchors remain readable. Call archive_session(anchor=False) to "
+    "archive, and session_commitment() to compute the 32-byte commitment locally."
 )
 
 
-class RetiredProgramError(RuntimeError):
-    """Raised when anchoring is pointed at the retired mainnet receipt_anchor."""
+class ReceiptAnchorUnavailableError(RuntimeError):
+    """Raised whenever on-chain anchoring is requested: no receipt_anchor is usable."""
+
 
 # Hour-bucket accumulator parameters (mirror programs/receipt_anchor processor.rs).
 BUCKET_WINDOW_SECONDS = 3600
@@ -208,7 +191,6 @@ def archive_session(
     anchor: bool = False,
     er_rpc_url: str = None,
     output_dir: str = None,
-    solana_rpc_url: str = None,
 ) -> dict:
     """Fetch, compress, optionally encrypt, hash, and optionally anchor a session.
 
@@ -220,32 +202,25 @@ def archive_session(
         32-byte key for AES-256-GCM encryption.  If ``None`` the archive is
         stored unencrypted.
     anchor:
-        When ``True`` fold a 32-byte commitment binding the session id and
-        archive hash into the ``receipt_anchor`` accumulator on Solana devnet so
-        it becomes timestamped on-chain. A mainnet RPC raises
-        :class:`RetiredProgramError` up front (retired 2026-07-14), before the
-        session is fetched or anything is written.
+        On-chain anchoring is unavailable until the receipt_anchor redeploy
+        under a fresh key: ``True`` raises :class:`ReceiptAnchorUnavailableError`
+        up front, before the session is fetched or anything is written. Use
+        :func:`session_commitment` to compute the commitment locally.
     er_rpc_url:
         Override ER RPC endpoint.
     output_dir:
         Directory where the archive file is written.  Defaults to cwd.
-    solana_rpc_url:
-        Devnet RPC for anchoring.  Defaults to ``SOLANA_ANCHOR_RPC``
-        (``https://api.devnet.solana.com``).
 
     Returns
     -------
     dict
         ``session_id``, ``action_count``, ``compressed_bytes``,
-        ``archive_hash``, ``archive_path``, ``solana_tx`` (str or None), and —
-        when anchored — ``anchor_commitment`` (hex of the 32-byte value folded
-        on-chain) and ``anchor_bucket_id`` (int) so the anchor can be
-        reproduced and verified against the devnet bucket.
+        ``archive_hash``, ``archive_path`` and ``session_commitment`` (hex of
+        the 32-byte commitment, ready to anchor after the redeploy).
     """
-    anchor_rpc = solana_rpc_url or SOLANA_ANCHOR_RPC
     if anchor:
-        # Refuse a mainnet anchor target before any fetch / compress / write.
-        assert_devnet_anchor_rpc(anchor_rpc)
+        # Refuse before any fetch / compress / write.
+        raise ReceiptAnchorUnavailableError(RECEIPT_ANCHOR_UNAVAILABLE_ERROR)
 
     try:
         import zstandard as zstd
@@ -280,24 +255,13 @@ def archive_session(
     archive_path = out_dir / f"session_{session_id}{suffix}"
     archive_path.write_bytes(compressed)
 
-    # --- optionally anchor on Solana ---
-    solana_tx: Optional[str] = None
-    anchor_commitment: Optional[str] = None
-    anchor_bucket_id: Optional[int] = None
-    if anchor:
-        commitment = _session_commitment(session_id, archive_hash)
-        anchor_commitment = commitment.hex()
-        solana_tx, anchor_bucket_id = _anchor_receipt(commitment, solana_rpc=anchor_rpc)
-
     return {
         "session_id": session_id,
         "action_count": len(log),
         "compressed_bytes": len(compressed),
         "archive_hash": archive_hash,
         "archive_path": str(archive_path),
-        "solana_tx": solana_tx,
-        "anchor_commitment": anchor_commitment,
-        "anchor_bucket_id": anchor_bucket_id,
+        "session_commitment": session_commitment(session_id, archive_hash).hex(),
     }
 
 
@@ -427,8 +391,11 @@ def _aes256_gcm_decrypt(key: bytes, blob: bytes) -> bytes:
     return plaintext
 
 
-def _session_commitment(session_id: str, archive_hash: str) -> bytes:
-    """Return the 32-byte commitment anchored on-chain for a session.
+def session_commitment(session_id: str, archive_hash: str) -> bytes:
+    """Return the 32-byte commitment to anchor on-chain for a session.
+
+    Computed locally; on-chain anchoring is unavailable until the receipt_anchor
+    redeploy under a fresh key.
 
     Binds the session id and the archive's SHA-256 so the anchored value is
     reproducible by anyone who knows both::
@@ -461,133 +428,3 @@ def _build_anchor_single_data(anchor32: bytes, bucket_id: int) -> bytes:
         + anchor32
         + int(bucket_id).to_bytes(8, "little")
     )
-
-
-def classify_rpc_url(url: str) -> str:
-    """Best-effort cluster guess from an RPC URL (no network).
-
-    Returns ``"mainnet"``, ``"devnet"``, ``"testnet"`` or ``"unknown"``. An
-    ``"unknown"`` URL is resolved authoritatively by the genesis-hash check in
-    :func:`_anchor_receipt` before anything is submitted.
-    """
-    from urllib.parse import urlparse
-
-    raw = (url or "").lower()
-    try:
-        parsed = urlparse(raw)
-        host = parsed.hostname or ""
-        full = f"{host}{parsed.path}" if host else raw
-    except ValueError:
-        host, full = "", raw
-    if "devnet" in full:
-        return "devnet"
-    if "testnet" in full:
-        return "testnet"
-    if "mainnet" in full or host in _KNOWN_MAINNET_HOSTS:
-        return "mainnet"
-    return "unknown"
-
-
-def assert_devnet_anchor_rpc(url: str) -> None:
-    """Refuse an RPC URL that is recognisably mainnet (retired receipt_anchor)."""
-    if classify_rpc_url(url) == "mainnet":
-        raise RetiredProgramError(MAINNET_ANCHOR_RETIRED_ERROR)
-
-
-def assert_devnet_genesis(genesis_hash: str) -> None:
-    """Authoritative pre-submit guard: only a devnet genesis hash may proceed."""
-    if genesis_hash == GENESIS_HASH_DEVNET:
-        return
-    if genesis_hash == GENESIS_HASH_MAINNET:
-        raise RetiredProgramError(MAINNET_ANCHOR_RETIRED_ERROR)
-    raise RuntimeError(
-        f"receipt_anchor anchoring runs only on Solana devnet ({RECEIPT_ANCHOR_PROGRAM}); "
-        f"this RPC reports genesis hash {genesis_hash}, which is not devnet. "
-        "No transaction was sent."
-    )
-
-
-def _anchor_receipt(
-    anchor32: bytes,
-    solana_rpc: str = None,
-) -> tuple[str, int]:
-    """Fold *anchor32* into the devnet ``receipt_anchor`` accumulator.
-
-    Builds the ``AnchorSingle`` instruction for the current hour bucket and
-    submits it with the env-supplied fee-payer.  After it lands, the bucket root
-    becomes ``sha256(prevRoot || anchor32)``.
-
-    Devnet only: a mainnet RPC (by URL, or by genesis hash once connected)
-    raises :class:`RetiredProgramError` — the mainnet receipt_anchor was retired
-    2026-07-14 — and nothing is signed or sent.
-
-    In a production deployment the fee-payer keypair would be loaded from a
-    secrets manager.  Here we read it from ``SOLANA_FEE_PAYER_KEY_HEX`` and use
-    the ``solders`` / ``solana-py`` stack when available, raising a clear error
-    otherwise.
-
-    Returns
-    -------
-    tuple[str, int]
-        The transaction signature and the hour bucket id the anchor was folded
-        into (needed, with the bucket's ordered anchor list, to later verify
-        inclusion against the devnet bucket).
-    """
-    import time
-
-    solana_rpc = solana_rpc or SOLANA_ANCHOR_RPC
-    assert_devnet_anchor_rpc(solana_rpc)
-
-    try:
-        from solders.keypair import Keypair  # type: ignore
-        from solders.pubkey import Pubkey  # type: ignore
-        from solders.transaction import Transaction  # type: ignore
-        from solders.instruction import Instruction, AccountMeta  # type: ignore
-        from solders.message import Message  # type: ignore
-        from solana.rpc.api import Client  # type: ignore
-        from solana.rpc.types import TxOpts  # type: ignore
-    except ImportError as exc:
-        raise ImportError(
-            "Solana anchoring requires 'solders' and 'solana': "
-            "pip install solders solana"
-        ) from exc
-
-    # Authoritative cluster check before the fee-payer key is even loaded: only a
-    # devnet genesis hash may proceed (mainnet → RetiredProgramError).
-    client = Client(solana_rpc)
-    assert_devnet_genesis(str(client.get_genesis_hash().value))
-
-    raw_key_hex = os.environ.get("SOLANA_FEE_PAYER_KEY_HEX", "")
-    if not raw_key_hex:
-        raise EnvironmentError(
-            "Set SOLANA_FEE_PAYER_KEY_HEX (64-byte hex) to anchor on Solana devnet."
-        )
-    payer = Keypair.from_bytes(bytes.fromhex(raw_key_hex))
-
-    # Hour bucket for "now"; passed explicitly so the derived PDA and the
-    # program's stored bucket id agree (mirrors agent-reputation's WRITE path).
-    bucket_id = int(time.time()) // BUCKET_WINDOW_SECONDS
-
-    program_id = Pubkey.from_string(RECEIPT_ANCHOR_PROGRAM)
-    bucket_pda, _bump = Pubkey.find_program_address(
-        [b"bucket", bucket_id.to_bytes(8, "little")], program_id
-    )
-    system_program = Pubkey.from_string("11111111111111111111111111111111")
-
-    ix = Instruction(
-        program_id=program_id,
-        accounts=[
-            # Payer must be a writable signer: it pays fees and funds bucket
-            # rent on first use of the hour bucket.
-            AccountMeta(pubkey=payer.pubkey(), is_signer=True, is_writable=True),
-            AccountMeta(pubkey=bucket_pda, is_signer=False, is_writable=True),
-            AccountMeta(pubkey=system_program, is_signer=False, is_writable=False),
-        ],
-        data=_build_anchor_single_data(anchor32, bucket_id),
-    )
-
-    recent_blockhash = client.get_latest_blockhash().value.blockhash
-    msg = Message.new_with_blockhash([ix], payer.pubkey(), recent_blockhash)
-    tx = Transaction([payer], msg, recent_blockhash)
-    result = client.send_transaction(tx, opts=TxOpts(skip_preflight=False))
-    return str(result.value), bucket_id

@@ -1,17 +1,21 @@
 """
-Hermetic tests for magicblock_archive's receipt_anchor guard (stdlib unittest,
-no network, no solders/solana install needed).
+Hermetic tests for magicblock_archive (stdlib unittest, no network, no
+solders/solana install needed).
 
 Run from the plugin dir:  python3 -m unittest discover -s tests -v
 
-Proves anchoring targets the devnet receipt_anchor only: the retired mainnet
-program (2026-07-14) is refused by URL before anything else happens, and by
-genesis hash before the fee-payer key is loaded or a transaction is built.
+Proves receipt anchoring refuses cleanly: there is no usable receipt_anchor
+deployment, so archive_session(anchor=True) raises ReceiptAnchorUnavailableError
+before the session is fetched or anything is written, and the module names no
+anchor target. The session commitment and the instruction encoder still work
+locally.
 """
 
 from __future__ import annotations
 
+import hashlib
 import os
+import re
 import sys
 import tempfile
 import types
@@ -23,59 +27,28 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import magicblock_archive as mba  # noqa: E402
 
-DEVNET_ANCHOR = "CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst"
 RETIRED_MAINNET_ANCHOR = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN"
-MAINNET_GENESIS = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d"
-DEVNET_GENESIS = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG"
-
-
-def _fake_solana_modules(genesis_hash: str, calls: list):
-    """Minimal stand-ins for solders / solana-py so _anchor_receipt can import."""
-
-    class _Resp:
-        def __init__(self, value):
-            self.value = value
-
-    class FakeClient:
-        def __init__(self, url):
-            calls.append(("Client", url))
-
-        def get_genesis_hash(self):
-            calls.append(("get_genesis_hash",))
-            return _Resp(genesis_hash)
-
-        def get_latest_blockhash(self):  # must never be reached on mainnet
-            calls.append(("get_latest_blockhash",))
-            raise AssertionError("get_latest_blockhash must not be called")
-
-        def send_transaction(self, *a, **k):  # must never be reached on mainnet
-            calls.append(("send_transaction",))
-            raise AssertionError("send_transaction must not be called")
-
-    mods = {}
-    for name in [
-        "solders", "solders.keypair", "solders.pubkey", "solders.transaction",
-        "solders.instruction", "solders.message", "solana", "solana.rpc",
-        "solana.rpc.api", "solana.rpc.types",
-    ]:
-        mods[name] = types.ModuleType(name)
-    mods["solders.keypair"].Keypair = object
-    mods["solders.pubkey"].Pubkey = object
-    mods["solders.transaction"].Transaction = object
-    mods["solders.instruction"].Instruction = object
-    mods["solders.instruction"].AccountMeta = object
-    mods["solders.message"].Message = object
-    mods["solana.rpc.api"].Client = FakeClient
-    mods["solana.rpc.types"].TxOpts = object
-    return mods
+UNAVAILABLE = "receipt anchoring is unavailable until the redeploy under a fresh key"
+# SHA-256 of the withdrawn devnet receipt_anchor id (held hashed, never named).
+WITHDRAWN_ANCHOR_SHA256 = "b851c1d6562bf9e70e2033a2db83d21fc5b249eab440a751d5638b285a4596c0"
 
 
 class DeploymentConstants(unittest.TestCase):
-    def test_write_target_is_devnet_and_mainnet_is_retired(self):
-        self.assertEqual(mba.RECEIPT_ANCHOR_PROGRAM, DEVNET_ANCHOR)
+    def test_no_anchor_target_and_mainnet_is_retired(self):
+        for name in ("RECEIPT_ANCHOR_PROGRAM", "ANCHOR_RPC_DEVNET", "SOLANA_ANCHOR_RPC", "_anchor_receipt"):
+            self.assertFalse(hasattr(mba, name), f"{name} must not exist")
         self.assertEqual(mba.RECEIPT_ANCHOR_MAINNET_RETIRED, RETIRED_MAINNET_ANCHOR)
         self.assertEqual(mba.RECEIPT_ANCHOR_MAINNET_RETIRED_ON, "2026-07-14")
-        self.assertIn("devnet", mba.ANCHOR_RPC_DEVNET)
+
+    def test_module_source_names_no_withdrawn_id(self):
+        src = Path(mba.__file__).read_text(encoding="utf-8")
+        for token in re.findall(r"[1-9A-HJ-NP-Za-km-z]{32,44}", src):
+            self.assertNotEqual(hashlib.sha256(token.encode()).hexdigest(), WITHDRAWN_ANCHOR_SHA256)
+
+    def test_unavailable_error_wording(self):
+        self.assertIn(UNAVAILABLE, mba.RECEIPT_ANCHOR_UNAVAILABLE_ERROR)
+        self.assertNotIn("devnet", mba.RECEIPT_ANCHOR_UNAVAILABLE_ERROR.lower())
+        self.assertTrue(issubclass(mba.ReceiptAnchorUnavailableError, RuntimeError))
 
     def test_instruction_layout_is_42_bytes(self):
         data = mba._build_anchor_single_data(b"\xaa" * 32, 100)
@@ -85,78 +58,48 @@ class DeploymentConstants(unittest.TestCase):
         self.assertEqual(data[2:34], b"\xaa" * 32)
         self.assertEqual(int.from_bytes(data[34:], "little"), 100)
 
-
-class ClusterGuard(unittest.TestCase):
-    def test_classify_rpc_url(self):
-        for url in [
-            "https://solana-rpc.publicnode.com",
-            "https://solana.publicnode.com",
-            "https://solana.api.onfinality.io/public",
-            "https://api.mainnet-beta.solana.com",
-            "https://mainnet.helius-rpc.com/?api-key=x",
-        ]:
-            self.assertEqual(mba.classify_rpc_url(url), "mainnet", url)
-        self.assertEqual(mba.classify_rpc_url("https://api.devnet.solana.com"), "devnet")
-        self.assertEqual(mba.classify_rpc_url("https://api.testnet.solana.com"), "testnet")
-        self.assertEqual(mba.classify_rpc_url("http://127.0.0.1:8899"), "unknown")
-
-    def test_mainnet_url_refused_with_retired_error(self):
-        with self.assertRaises(mba.RetiredProgramError) as cm:
-            mba.assert_devnet_anchor_rpc("https://solana-rpc.publicnode.com")
-        self.assertIn("retired 2026-07-14", str(cm.exception))
-        self.assertIn(DEVNET_ANCHOR, str(cm.exception))
-        mba.assert_devnet_anchor_rpc("https://api.devnet.solana.com")  # no raise
-
-    def test_genesis_guard(self):
-        mba.assert_devnet_genesis(DEVNET_GENESIS)  # no raise
-        with self.assertRaises(mba.RetiredProgramError):
-            mba.assert_devnet_genesis(MAINNET_GENESIS)
-        with self.assertRaises(RuntimeError) as cm:
-            mba.assert_devnet_genesis("localValidatorGenesis")
-        self.assertIn("not devnet", str(cm.exception))
+    def test_session_commitment_is_local_and_reproducible(self):
+        c = mba.session_commitment("sess1", "ab" * 32)
+        self.assertEqual(len(c), 32)
+        self.assertEqual(
+            c, hashlib.sha256(f"openclaw-vault:session:sess1:sha256:{'ab' * 32}".encode()).digest()
+        )
 
 
-class AnchorReceiptRefusal(unittest.TestCase):
-    def test_mainnet_url_refused_before_any_import_or_network(self):
-        calls: list = []
-        with mock.patch.dict(sys.modules, _fake_solana_modules(MAINNET_GENESIS, calls)):
-            with self.assertRaises(mba.RetiredProgramError):
-                mba._anchor_receipt(b"\x01" * 32, solana_rpc="https://solana-rpc.publicnode.com")
-        self.assertEqual(calls, [], "no client may be created for a mainnet URL")
-
-    def test_mainnet_genesis_refused_before_key_load_or_send(self):
-        calls: list = []
-        env = {k: v for k, v in os.environ.items() if k != "SOLANA_FEE_PAYER_KEY_HEX"}
-        with mock.patch.dict(sys.modules, _fake_solana_modules(MAINNET_GENESIS, calls)), \
-                mock.patch.dict(os.environ, env, clear=True):
-            with self.assertRaises(mba.RetiredProgramError) as cm:
-                mba._anchor_receipt(b"\x01" * 32, solana_rpc="http://127.0.0.1:8899")
-        self.assertIn("retired 2026-07-14", str(cm.exception))
-        self.assertEqual(calls, [("Client", "http://127.0.0.1:8899"), ("get_genesis_hash",)])
-
-    def test_devnet_genesis_passes_the_cluster_check(self):
-        calls: list = []
-        env = {k: v for k, v in os.environ.items() if k != "SOLANA_FEE_PAYER_KEY_HEX"}
-        with mock.patch.dict(sys.modules, _fake_solana_modules(DEVNET_GENESIS, calls)), \
-                mock.patch.dict(os.environ, env, clear=True):
-            # Past the cluster check, the next gate is the fee-payer key.
-            with self.assertRaises(EnvironmentError) as cm:
-                mba._anchor_receipt(b"\x01" * 32, solana_rpc="http://127.0.0.1:8899")
-        self.assertIn("SOLANA_FEE_PAYER_KEY_HEX", str(cm.exception))
-        self.assertNotIn(("send_transaction",), calls)
-
-    def test_archive_session_refuses_mainnet_anchor_before_fetching(self):
+class AnchorRefusal(unittest.TestCase):
+    def test_archive_session_refuses_anchor_before_fetching_or_writing(self):
         with tempfile.TemporaryDirectory() as out, \
                 mock.patch.object(mba, "fetch_session_log") as fetch:
-            with self.assertRaises(mba.RetiredProgramError):
-                mba.archive_session(
-                    "sess1",
-                    anchor=True,
-                    output_dir=out,
-                    solana_rpc_url="https://api.mainnet-beta.solana.com",
-                )
+            with self.assertRaises(mba.ReceiptAnchorUnavailableError) as cm:
+                mba.archive_session("sess1", anchor=True, output_dir=out)
             fetch.assert_not_called()
             self.assertEqual(os.listdir(out), [], "nothing may be written")
+        self.assertIn(UNAVAILABLE, str(cm.exception))
+
+    def test_archive_session_has_no_rpc_parameter(self):
+        with self.assertRaises(TypeError):
+            mba.archive_session("sess1", anchor=True, solana_rpc_url="https://api.devnet.solana.com")
+
+    def test_archive_without_anchor_returns_commitment(self):
+        fake_zstd = types.ModuleType("zstandard")
+
+        class _C:
+            def __init__(self, level):
+                pass
+
+            def compress(self, b):
+                return b"Z" + b
+
+        fake_zstd.ZstdCompressor = _C
+        log = [{"slot": 1, "signature": "s", "action_type": "tx", "accounts": [], "data_hex": ""}]
+        with tempfile.TemporaryDirectory() as out, \
+                mock.patch.dict(sys.modules, {"zstandard": fake_zstd}), \
+                mock.patch.object(mba, "fetch_session_log", return_value=log):
+            r = mba.archive_session("sess1", anchor=False, output_dir=out)
+            self.assertTrue(Path(r["archive_path"]).exists())
+        self.assertEqual(r["action_count"], 1)
+        self.assertEqual(r["session_commitment"], mba.session_commitment("sess1", r["archive_hash"]).hex())
+        self.assertNotIn("solana_tx", r)
 
 
 if __name__ == "__main__":
