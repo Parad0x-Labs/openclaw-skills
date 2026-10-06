@@ -7,12 +7,12 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { PublicKey } from "@solana/web3.js";
 
 import {
   DARK_SECP256K1_AUTH,
-  RECEIPT_ANCHOR,
-  RECEIPT_ANCHOR_DEVNET,
+  RECEIPT_ANCHORING_UNAVAILABLE,
   RECEIPT_ANCHOR_MAINNET_RETIRED,
   NULL_REGISTRAR_MAINNET,
   USDC_MINT,
@@ -30,31 +30,44 @@ import {
   buildOnboardPlan,
   buildOnboardTools,
 } from "../dist/onboard.js";
+import * as onboard from "../dist/onboard.js";
 
-const SEIZED = [
-  "EepqzVBNuzCgD6XGiB19pDDhzFG3gUL4z1nabBYxpfjS",
-  "24tmjEd1DhPW2QuPV6BzkFFHrq2PtELoLqv5cuv2Xu65",
-];
+const SEIZED = ["EepqzVBNuzCgD6XGiB19pDDhzFG3gUL4z1nabBYxpfjS"];
+// SHA-256 of compromised program IDs this repo once referenced (held hashed, never named).
+const COMPROMISED_SHA256 = new Set([
+  "a7656054f294394e546b39f90c03a0cb31446ac46c37285f5bfc900b3bcea827",
+  "35a832bc1dff671d6a806d63ea404ed181ed9675c49d513889e4a3aabda68423",
+  "7abaeaa69c452dd5349bbde0858b343984fdef2e1bf32359248915b777c535bc",
+  "0a81ba274124ff3e0e1ccc8751aaf0502e64ae7cd7ca1c01b2ac2307e0fe7888",
+  "b851c1d6562bf9e70e2033a2db83d21fc5b249eab440a751d5638b285a4596c0",
+  "a47c1fce4236ba82d1b46be7c5f1a88e7cb8e884a505b4166f1787b25f0ff7d2",
+]);
+const sha256 = (s) => createHash("sha256").update(s).digest("hex");
+/** Every base58-looking token in a value, for the "names no compromised ID" checks. */
+const base58Tokens = (v) => JSON.stringify(v).match(/[1-9A-HJ-NP-Za-km-z]{32,44}/g) ?? [];
 const WALLET = "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM";
 const SERVICES = [{ name: "summarize", priceUsdc: 0.02 }, { name: "translate", priceUsdc: 0.05 }];
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
-test("no seized program ID is referenced; RPC is publicnode", () => {
-  for (const id of [DARK_SECP256K1_AUTH, RECEIPT_ANCHOR]) {
+test("no seized or compromised program ID is referenced; RPC is publicnode", () => {
+  for (const id of [DARK_SECP256K1_AUTH, RECEIPT_ANCHOR_MAINNET_RETIRED, NULL_REGISTRAR_MAINNET]) {
     assert.ok(!SEIZED.includes(id), `${id} is seized`);
+  }
+  for (const v of Object.values(onboard)) {
+    if (typeof v !== "string" && (typeof v !== "object" || v === null)) continue;
+    for (const t of base58Tokens(v)) assert.ok(!COMPROMISED_SHA256.has(sha256(t)), "exports name a compromised ID");
   }
   assert.equal(DEFAULT_RPC, "https://solana-rpc.publicnode.com");
   assert.doesNotMatch(DEFAULT_RPC, /api\.mainnet-beta\.solana\.com/);
   assert.equal(USDC_MINT["solana-mainnet"], "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 });
 
-test("active receipt anchor is the devnet program, never the retired mainnet one", () => {
-  assert.equal(RECEIPT_ANCHOR_DEVNET, "CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst");
-  assert.equal(new PublicKey(RECEIPT_ANCHOR_DEVNET).toBytes().length, 32); // valid key
-  assert.equal(RECEIPT_ANCHOR, RECEIPT_ANCHOR_DEVNET);
+test("no active receipt anchor is exported; anchoring is unavailable until the redeploy", () => {
+  assert.equal(onboard.RECEIPT_ANCHOR, undefined);
+  assert.equal(onboard.RECEIPT_ANCHOR_DEVNET, undefined);
+  assert.equal(RECEIPT_ANCHORING_UNAVAILABLE, "receipt anchoring is unavailable until the redeploy under a fresh key");
   assert.equal(RECEIPT_ANCHOR_MAINNET_RETIRED, "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN");
-  assert.notEqual(RECEIPT_ANCHOR, RECEIPT_ANCHOR_MAINNET_RETIRED);
   assert.equal(NULL_REGISTRAR_MAINNET, "NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np");
 });
 
@@ -157,8 +170,8 @@ test("buildOnboardPlan: full plan with name reserved + cheapest gate price", () 
   assert.equal(plan.storefront.x402_gate_config.priceUsdc, 0.02); // cheapest of 0.02 / 0.05
   assert.equal(plan.name.requested, "myagent.null");
   assert.match(plan.name.pay_by_name_preview, /pay_x402\("myagent\.null"\)/);
-  assert.equal(plan.receipts.program, RECEIPT_ANCHOR);
-  assert.notEqual(plan.receipts.program, RECEIPT_ANCHOR_MAINNET_RETIRED);
+  assert.equal(plan.receipts.program, null);
+  assert.equal(plan.receipts.anchoring, "unavailable");
 });
 
 test("buildOnboardPlan: no name → name section is null", () => {
@@ -223,20 +236,21 @@ test("onboard output carries no LIVE / claim-now / register-on-mainnet text (bot
   }
 });
 
-test("receipts block is network-aware: devnet → CPQ8 active; mainnet → retired anchor stated, anchoring on devnet", () => {
+test("receipts block refuses anchoring on every network and names no anchor target", () => {
   const dev = buildReceiptsBlock("solana-devnet");
-  assert.equal(dev.program, RECEIPT_ANCHOR_DEVNET);
-  assert.equal(dev.anchor_network, "solana-devnet");
-  assert.equal(dev.mainnet_program_retired, undefined);
-  assert.doesNotMatch(JSON.stringify(dev), new RegExp(RECEIPT_ANCHOR_MAINNET_RETIRED));
-
   const main = buildReceiptsBlock("solana-mainnet");
-  assert.equal(main.program, RECEIPT_ANCHOR_DEVNET); // active anchor is never the retired id
-  assert.equal(main.anchor_network, "solana-devnet");
-  assert.equal(main.mainnet_program_retired, RECEIPT_ANCHOR_MAINNET_RETIRED);
-  assert.equal(main.mainnet_retired_at, "2026-07-14");
-  assert.match(main.note, /retired on 2026-07-14/);
-  assert.match(main.note, /anchoring runs on devnet/);
+  for (const [net, b] of [["solana-devnet", dev], ["solana-mainnet", main]]) {
+    assert.equal(b.network, net);
+    assert.equal(b.anchoring, "unavailable");
+    assert.equal(b.program, null);
+    assert.equal(b.anchor_network, null);
+    assert.equal(b.mainnet_program_retired, RECEIPT_ANCHOR_MAINNET_RETIRED);
+    assert.equal(b.mainnet_retired_at, "2026-07-14");
+    assert.match(b.note, /Receipt anchoring is unavailable until the redeploy under a fresh key/);
+    assert.match(b.note, /retired on 2026-07-14/);
+    assert.doesNotMatch(b.note, /devnet/i);
+    for (const t of base58Tokens(b)) assert.ok(!COMPROMISED_SHA256.has(sha256(t)));
+  }
 
   // Wired into the plan by network.
   const devPlan = buildOnboardPlan({
@@ -249,7 +263,12 @@ test("receipts block is network-aware: devnet → CPQ8 active; mainnet → retir
     identityRegistered: false,
   });
   assert.deepEqual(mainPlan.receipts, main);
-  assert.ok(mainPlan.next_steps.some((s) => /mainnet receipt_anchor program was retired 2026-07-14/.test(s)));
+  for (const plan of [devPlan, mainPlan]) {
+    assert.ok(plan.next_steps.some((s) => /receipt anchoring is unavailable until the redeploy under a fresh key/.test(s)));
+    assert.match(plan.summary, /receipt anchoring is unavailable until the redeploy/);
+    assert.doesNotMatch(JSON.stringify(plan.next_steps) + plan.summary, /anchor[^"]*devnet|on devnet/i);
+    for (const t of base58Tokens(plan)) assert.ok(!COMPROMISED_SHA256.has(sha256(t)), "plan names a compromised ID");
+  }
 });
 
 // ── tool factory ────────────────────────────────────────────────────────────────

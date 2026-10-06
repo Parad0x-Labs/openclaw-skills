@@ -2,8 +2,8 @@
  * web0-onboard — host-free core.
  *
  * One call assembles a complete, validated web0 setup for an OpenClaw agent:
- * on-chain identity, a paid x402 storefront, network-aware receipt anchoring,
- * and the .null name status. All logic lives here with NO `openclaw/*` host
+ * on-chain identity, a paid x402 storefront, the receipt-anchoring status, and
+ * the .null name status. All logic lives here with NO `openclaw/*` host
  * import, so it loads and unit-tests standalone. index.ts is the thin wrapper.
  *
  * Trust model: READ-ONLY. Derives/queries on-chain state and emits config — it
@@ -25,10 +25,13 @@ export type SolanaNetwork = "solana-mainnet" | "solana-devnet";
 // IDs awaiting clean redeploy under Squads multisig.
 export const DARK_SECP256K1_AUTH = "AqwBbV13AoczhoELwP8oxT3nDqB6MsLWXauNzHkssZ9B";
 
-/** Active receipt_anchor program — devnet. Receipt anchoring runs here. */
-export const RECEIPT_ANCHOR_DEVNET = "CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst";
-/** The active receipt anchor (devnet). */
-export const RECEIPT_ANCHOR = RECEIPT_ANCHOR_DEVNET;
+/**
+ * There is no usable receipt_anchor deployment on any network: receipt anchoring
+ * is unavailable until the redeploy under a fresh key. The plan never names an
+ * anchor target.
+ */
+export const RECEIPT_ANCHORING_UNAVAILABLE =
+  "receipt anchoring is unavailable until the redeploy under a fresh key";
 /** Mainnet receipt_anchor — RETIRED 2026-07-14. Never presented as active. */
 export const RECEIPT_ANCHOR_MAINNET_RETIRED = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN";
 export const RECEIPT_ANCHOR_MAINNET_RETIRED_AT = "2026-07-14";
@@ -235,28 +238,23 @@ export async function accountExists(connection: Connection, pda: string): Promis
 
 // ── Plan assembly (pure) ──────────────────────────────────────────────────────
 
-/** Receipts block, keyed to the settlement network. */
+/**
+ * Receipts block. The same on every settlement network: anchoring is
+ * unavailable, so no anchor program or anchor network is named.
+ */
 export function buildReceiptsBlock(network: SolanaNetwork): Record<string, unknown> {
-  if (network === "solana-devnet") {
-    return {
-      network,
-      anchor_network: "solana-devnet",
-      program: RECEIPT_ANCHOR_DEVNET,
-      note:
-        "x402-gate and x402-pay derive matching receipt hashes; anchor each sale via " +
-        `receipt_anchor on devnet (${RECEIPT_ANCHOR_DEVNET}) for a verifiable trail.`,
-    };
-  }
   return {
     network,
-    anchor_network: "solana-devnet",
-    program: RECEIPT_ANCHOR_DEVNET,
+    anchoring: "unavailable",
+    anchor_network: null,
+    program: null,
     mainnet_program_retired: RECEIPT_ANCHOR_MAINNET_RETIRED,
     mainnet_retired_at: RECEIPT_ANCHOR_MAINNET_RETIRED_AT,
     note:
+      `${RECEIPT_ANCHORING_UNAVAILABLE[0].toUpperCase()}${RECEIPT_ANCHORING_UNAVAILABLE.slice(1)}. ` +
       `The mainnet receipt_anchor program (${RECEIPT_ANCHOR_MAINNET_RETIRED}) was retired on ` +
-      `${RECEIPT_ANCHOR_MAINNET_RETIRED_AT}; receipt anchoring runs on devnet (${RECEIPT_ANCHOR_DEVNET}). ` +
-      "x402-gate and x402-pay still derive matching receipt hashes for every mainnet sale.",
+      `${RECEIPT_ANCHOR_MAINNET_RETIRED_AT}; its historical anchors remain readable. ` +
+      "x402-gate and x402-pay still derive matching receipt hashes for every sale — keep them.",
   };
 }
 
@@ -354,15 +352,13 @@ export function buildOnboardPlan(opts: {
       identityRegistered
         ? "Identity is on-chain — nothing to do."
         : "Optionally bind your identity with the agent-passport plugin (recommended for verifiable counterparties).",
-      v.network === "solana-devnet"
-        ? `Anchor sale receipts via receipt_anchor on devnet (${RECEIPT_ANCHOR_DEVNET}).`
-        : `Receipt anchoring runs on devnet (${RECEIPT_ANCHOR_DEVNET}); the mainnet receipt_anchor program was retired ${RECEIPT_ANCHOR_MAINNET_RETIRED_AT}.`,
+      `Keep the receipt hashes x402-gate and x402-pay derive: ${RECEIPT_ANCHORING_UNAVAILABLE} (the mainnet receipt_anchor program was retired ${RECEIPT_ANCHOR_MAINNET_RETIRED_AT}).`,
       `.null names: registration is frozen until the registrar relaunch (mainnet registrar retired ${NULL_REGISTRAR_MAINNET_RETIRED_AT}); existing names resolve read-only.` +
         (fullName ? ` ${fullName} is a valid label to use once registration reopens.` : ""),
     ],
     summary:
       `web0 setup assembled for ${wallet} on ${v.network}: ` +
-      `${v.services.length} service(s), payout to your wallet, receipt anchoring on devnet. ` +
+      `${v.services.length} service(s), payout to your wallet; ${RECEIPT_ANCHORING_UNAVAILABLE}. ` +
       ".null registration is frozen until the registrar relaunch; existing names resolve read-only.",
   };
 }
@@ -384,7 +380,7 @@ export function buildOnboardTools(config: Web0OnboardConfig): ToolDef[] {
     description:
       "Set up an agent on web0 in one call: validate inputs, check on-chain identity, " +
       "and return a complete setup — a paid x402 storefront config (funds to your wallet), " +
-      "network-aware receipt anchoring (devnet), and the .null name status (mainnet registration " +
+      "the receipt-anchoring status (unavailable until the redeploy), and the .null name status (mainnet registration " +
       "frozen until the registrar relaunch; existing names resolve read-only). Read-only: emits " +
       "config and checks state; never signs or moves funds.",
     parameters: {

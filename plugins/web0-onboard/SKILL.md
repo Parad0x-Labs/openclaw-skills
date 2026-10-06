@@ -1,6 +1,6 @@
 ---
 name: web0-onboard
-description: web0 setup for an OpenClaw agent — plan your identity + paid x402 storefront and receipt anchoring, and get your .null name status (mainnet registrar retired 2026-08-29; existing names resolve read-only, registration frozen until relaunch). Sell services for USDC on Solana. Non-custodial (your wallet signs).
+description: web0 setup for an OpenClaw agent — plan your identity + paid x402 storefront, get the receipt-anchoring status and your .null name status (mainnet registrar retired 2026-08-29; existing names resolve read-only, registration frozen until relaunch). Sell services for USDC on Solana. Non-custodial (your wallet signs).
 tags: web0, null, x402, solana, monetization, agents, openclaw
 requires_openclaw: ">=2026.6.1"
 license: MIT
@@ -22,10 +22,10 @@ validated setup your agent can act on immediately.
 - **Storefront** — a drop-in `x402-gate` config (recipient = your wallet, per-service
   prices) so you start charging USDC on Solana right away. Funds settle to **your**
   wallet; the plugin never holds a key.
-- **Receipts** — network-aware: on devnet, the `receipt_anchor` program
-  `CPQ8Y1bd…`; on mainnet, a note that the mainnet anchor program (`6HSRGivd…`)
-  was retired 2026-07-14 and anchoring runs on devnet. x402-gate and x402-pay
-  derive matching receipt hashes for every sale.
+- **Receipts** — x402-gate and x402-pay derive matching receipt hashes for every
+  sale. Receipt anchoring is unavailable until the redeploy under a fresh key, so
+  the block names no anchor program; it notes that the mainnet anchor program
+  (`6HSRGivd…`) was retired 2026-07-14.
 - **Name status** — if you pass a `name`, it is validated and returned with its
   status: the mainnet registrar is retired, existing names resolve read-only, and
   registration is frozen until the relaunch. No name is needed to sell.
@@ -45,8 +45,9 @@ via `setWeb0Signer(signer)`); every tool takes `dryRun: true`.
 - **`set_null_endpoint({ name, endpoint })`** — publish your x402 endpoint on the
   name (`UPDATE_ENDPOINT`). Owner-only, tiny tx fee.
 - **`set_null_stealth_meta({ name, stealth_meta_hex })`** — publish a NullPay
-  stealth address for recipient-private pay-by-name (demonstrated end to end on
-  devnet).
+  stealth address for recipient-private pay-by-name (pay-by-name to a one-time
+  stealth address is implemented in code with tests; a devnet redeploy under a
+  fresh key is pending).
 
 ## The loop it sets up
 
@@ -69,12 +70,13 @@ buyer:  pay_x402(<your x402-gate URL>)  → quote → pay USDC → receipt hash
 ## Status
 
 - x402 USDC payment (`x402-gate` / `x402-pay` SPL transfers): mainnet (opt-in) and devnet.
-- Receipt anchoring: devnet, `receipt_anchor` `CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst`.
-  The mainnet program `6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN` was retired 2026-07-14.
+- Receipt anchoring: unavailable until the redeploy under a fresh key. The mainnet
+  program `6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN` was retired 2026-07-14.
 - `.null` names: the mainnet registrar `NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np`
   was retired 2026-08-29. Existing names resolve read-only; writes are frozen until
-  the registrar relaunch. Recipient-private pay-by-name was demonstrated end to end
-  on devnet.
+  the registrar relaunch. Recipient-private pay-by-name to a one-time stealth
+  address is implemented in code with tests; a devnet redeploy under a fresh key is
+  pending.
 
 ## Config (all optional defaults)
 

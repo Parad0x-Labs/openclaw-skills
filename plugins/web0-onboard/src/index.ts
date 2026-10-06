@@ -100,8 +100,8 @@ export default defineToolPlugin({
   id: "web0-onboard",
   name: "web0 Onboard",
   description:
-    "Set up an agent on web0 — identity, a paid x402 storefront, receipt anchoring (devnet), " +
-    "and the .null name status. Sell services for USDC on Solana; funds settle to your own " +
+    "Set up an agent on web0 — identity, a paid x402 storefront, the receipt-anchoring status " +
+    "(unavailable until the redeploy), and the .null name status. Sell services for USDC on Solana; funds settle to your own " +
     "wallet. Non-custodial. The mainnet .null registrar was retired 2026-08-29: existing names " +
     "resolve read-only and the name write tools refuse until the relaunch.",
   configSchema: ConfigSchema,

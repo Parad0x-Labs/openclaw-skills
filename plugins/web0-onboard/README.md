@@ -1,7 +1,7 @@
 # @parad0x_labs/openclaw-web0-onboard 🚀
 
-**One call sets your agent up on web0** — identity, a paid x402 storefront, receipt
-anchoring, and the `.null` name status. Sell services for USDC on Solana; funds
+**One call sets your agent up on web0** — identity, a paid x402 storefront, the
+receipt-anchoring status, and the `.null` name status. Sell services for USDC on Solana; funds
 settle to **your** wallet. Read-only, non-custodial.
 
 ```bash
@@ -30,7 +30,7 @@ Returns a consolidated, validated setup:
 |---|---|
 | `identity` | your on-chain identity PDA + whether it's bound |
 | `storefront` | drop-in `x402-gate` config (recipient = your wallet, per-service prices) |
-| `receipts` | network-aware anchoring: `receipt_anchor` on devnet (`CPQ8Y1bd…`); on mainnet it states that the mainnet anchor (`6HSRGivd…`) was retired 2026-07-14 and anchoring runs on devnet |
+| `receipts` | receipt-hash guidance; anchoring is unavailable until the redeploy under a fresh key, so no anchor program is named (the mainnet anchor `6HSRGivd…` was retired 2026-07-14) |
 | `name` | your `.null` label, validated, plus its status: registration frozen, existing names resolve read-only |
 | `next_steps` / `summary` | an ordered, human-readable setup checklist |
 
@@ -54,7 +54,8 @@ holds a key. Each tool takes `dryRun: true` to preview without signing.
 | `set_null_endpoint({ name, endpoint })` | publish your x402 endpoint on the name (`UPDATE_ENDPOINT`) |
 | `set_null_stealth_meta({ name, stealth_meta_hex })` | publish a stealth address for recipient-private pay-by-name |
 
-Recipient-private pay-by-name has been demonstrated end to end on devnet.
+Recipient-private pay-by-name to a one-time stealth address is implemented in code
+with tests; a devnet redeploy under a fresh key is pending.
 
 ## How it fits
 
@@ -65,7 +66,7 @@ buyer:  pay_x402(<your x402-gate URL>)  → quote → pay USDC → receipt hash
 ```
 
 x402 USDC payment (`x402-gate` / `x402-pay` SPL transfers) runs on mainnet (opt-in)
-and devnet. Receipt anchoring runs on devnet (`CPQ8Y1bd…`).
+and devnet. Receipt anchoring is unavailable until the redeploy under a fresh key.
 
 ## Trust model
 
