@@ -6,6 +6,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { PublicKey } from "@solana/web3.js";
+import { createHash } from "node:crypto";
 
 import {
   NULL_REGISTRAR_MAINNET,
@@ -15,11 +16,12 @@ import {
   parseNullDomain,
 } from "../dist/resolve.js";
 
-const SEIZED_REGISTRAR = "H4wbFJucY9shJt95N8Bra532Z4nnkKhGEfqWvLcYfuDm";
+// SHA-256 of the seized registrar's program id (held hashed, never named).
+const SEIZED_REGISTRAR_SHA256 = "a47c1fce4236ba82d1b46be7c5f1a88e7cb8e884a505b4166f1787b25f0ff7d2";
 
 test("registrar is the legacy mainnet id (retired, records readable), never the seized one", () => {
   assert.equal(NULL_REGISTRAR_MAINNET, "NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np");
-  assert.notEqual(NULL_REGISTRAR_MAINNET, SEIZED_REGISTRAR);
+  assert.notEqual(createHash("sha256").update(NULL_REGISTRAR_MAINNET).digest("hex"), SEIZED_REGISTRAR_SHA256);
 });
 
 test("deriveNullDomainPda matches known on-chain PDAs (with and without suffix)", () => {
