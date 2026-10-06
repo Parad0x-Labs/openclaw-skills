@@ -1,9 +1,9 @@
-# @parad0x_labs/openclaw-payment-session ⏱️
+# @parad0x_labs/openclaw-payment-session
 
 **Streaming + recurring billing for agents over x402.** Meter pay-as-you-go usage
 or run a subscription, settle in **batches** through `pay_x402` (one tx per
-settlement, not per tick), with a hard per-session spend cap. Non-custodial — it
-never moves money or holds a key.
+settlement, not per tick), with a per-session budget that caps the amounts it
+suggests. Non-custodial — it never moves money or holds a key.
 
 ```bash
 npm i @parad0x_labs/openclaw-payment-session
@@ -35,8 +35,12 @@ open_payment_session(payee="seller.null", mode="metered", settleAtUsdc=1, maxTot
 ## Trust model
 
 - **Non-custodial** — accounting only; settlement is `pay_x402` (your wallet signs).
-- **Capped** — every session has a hard `maxTotalUsdc`; the due amount is always
-  clamped to the remaining budget, so a runaway stream can't overspend.
+- **Budget-capped accounting, not spend enforcement.** Every session has a `maxTotalUsdc`
+  budget: `check_settlement_due` never suggests more than the remaining budget, and
+  `record_settled` refuses to record more. The session does not control `pay_x402`, which
+  pays the seller's quoted amount: a payment can exceed the suggested amount and the
+  session budget. Per-payment spend is bounded by x402-pay's `maxAmountUsdc` (the 5 bps
+  protocol fee is added on top of that cap). State is in memory and is lost on restart.
 
 Pairs with `x402-pay` (settlement), `x402-gate` (the selling side), and
 `web0-onboard` (identity + endpoint). MIT licensed.

@@ -12,8 +12,9 @@
  *
  * Pure accounting — it never moves money. It tells the agent WHEN and HOW MUCH
  * to settle; the agent pays the payee via x402-pay and calls recordSettled. A
- * hard maxTotalUsdc lifetime cap bounds every session (a runaway stream can't
- * drain past it).
+ * maxTotalUsdc lifetime budget caps the amounts it suggests and records. It does
+ * not control the payment itself: x402-pay pays the seller's quote, bounded per
+ * payment by its own maxAmountUsdc.
  */
 
 export type SettlePolicy =
