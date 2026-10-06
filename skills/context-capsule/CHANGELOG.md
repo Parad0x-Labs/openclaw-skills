@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- **Docs: measured scope.** SKILL.md fidelity figures from private sessions
+  (~79% / ~93% key-signal recall) replaced with numbers from a public fixture
+  (`bench/fixtures`, shared with `@parad0x_labs/context-capsule`), reproducible
+  with `bench/fixture-bench.mjs` and `test/fidelity-bench.mjs`. Supersession
+  figure restated as measured on the 6-case set in `test/supersession-bench.mjs`
+  (6/6 at v1.7.0; the 83% figure is the test's floor).
+- **CI.** The skills CI lane now runs `npm test` and the fixture benchmark for this
+  skill. Before this, CI ran typecheck only and `npm test` ran locally and in
+  `prepublishOnly`; the 1.7.0 notes below calling these checks "CI-gated" refer to
+  that `npm test` run.
+
 ## 1.7.0
 
 - **Value-atom preservation.** A lone distinctive value — a bare port (`5433`), an

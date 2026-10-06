@@ -18,19 +18,25 @@ Claude, GPT, Ollama, Mistral, LM Studio.
 
 - **Lane-change aware.** When the session pivots ("replace X with Y", "forget X,
   use Y instead"), the capsule marks the abandoned direction as superseded and
-  keeps the live one — so the model never wanders back into a dropped plan. On a
-  held-out pivot set it cleans 83% of abandoned subjects with **zero** wrongly
-  flagged live choices.
+  keeps the live one, so the model is steered away from a dropped plan. On the
+  6-case pivot set in `test/supersession-bench.mjs` (5 pivots, 1 no-pivot
+  control, 6 abandoned subjects) v1.7.0 strikes or omits 6 of 6 abandoned
+  subjects and flags 0 live choices at budgets 700 and 1,400; `npm test` fails
+  below 83% or on any wrongly flagged live choice. Pivots stated without an
+  explicit cue are not detected.
 - **High fidelity per token.** Distinctive signals — file paths, IDs, ports,
   URLs, commands, errors, decisions — are emitted as dense atoms. As of **v1.7.0**,
   a lone value (a bare port `5433`, an issue ref `#4821`, a version `v2.13.0`, an
   ISO date, a hyphenated code like `NEEDLE-ZX-7742`) is emitted as its **own** atom,
   so it survives compression even when its surrounding sentence loses the budget
-  race — CI-tested in `test/value-survival.test.mjs`. On the maintainer's own real
-  sessions the capsule kept ~79% of key signals at ~5× reduction and ~93% at ~3.4×;
-  `test/fidelity-bench.mjs` measures this against **your own** `~/.openclaw` sessions
-  (run it on your data to reproduce — the figures are from private sessions, not a
-  repo fixture).
+  race (`test/value-survival.test.mjs`). On the public 109-message fixture in
+  `bench/fixtures`, with default settings the model receives 2,061 estimated
+  tokens per call instead of 7,281, and 21 of 40 fixture questions still have
+  their answer keywords in that text (35 with full history). Key-signal recall of
+  the capsule alone is 65% at a 1,200-token budget and 86% at 2,000
+  (`test/fidelity-bench.mjs`, which also runs on your own `~/.openclaw` sessions).
+  These are availability checks, not model-answer accuracy, which has not been
+  measured. Details: `docs/CONTEXT_CAPSULE_BENCHMARK.md` in the repository.
 
 > **Self-contained (v1.7.0):** The compression core is bundled directly in this
 > skill (`src/compression.ts`). There is **no external runtime dependency**, and
@@ -38,7 +44,8 @@ Claude, GPT, Ollama, Mistral, LM Studio.
 > runs locally using only Node's built-in `zlib` and `crypto`, and is fully
 > deterministic. Capsules carry a `schema` tag (`context-capsule.v2`).
 
-> **Protections (defense-in-depth, all CI-gated by `npm test`):**
+> **Protections (defense-in-depth, all checked by `npm test`, which runs in the
+> repository's skills CI lane and before every publish):**
 > - **Secret redaction (every surface).** API keys (OpenAI, Anthropic, AWS,
 >   Google, GitHub classic + fine-grained, GitLab, npm, Slack, Stripe, SendGrid,
 >   Twilio), JWTs, PEM blocks, URL basic-auth, `DATABASE_URL=` DSNs, and
@@ -85,6 +92,8 @@ commands, links, questions, and durable facts. The capsule is capped by
 |                       | Without | With     |
 | --------------------- | ------- | -------- |
 | Prompt history sent   | Full transcript | Capsule + recent tail |
+| Public fixture (109 messages), tokens per call | 7,281 | 2,061 |
+| Public fixture, questions with answer keywords present | 35 / 40 | 21 / 40 |
 | Compression trigger   | N/A     | Message + token threshold |
 | Runtime dependencies  | N/A     | Node built-ins only |
 

@@ -44,8 +44,10 @@ receipts June–July 2026 and is retired; those historical anchors remain readab
 
 A paid agent runs long conversations. [`context-capsule`](../skills/context-capsule)
 (`npm i @parad0x_labs/openclaw-context-capsule`) compresses old history before
-each model call — keeping decisions, errors, IDs, and values while cutting tokens
-(fidelity measured on your own `~/.openclaw` sessions via `test/fidelity-bench.mjs`).
+each model call — keeping decisions, errors, IDs, and values while cutting tokens.
+On the public fixture it sends 2,061 instead of 7,281 tokens per call; the
+capsule is lossy, so see [the benchmark](CONTEXT_CAPSULE_BENCHMARK.md) for what
+survives.
 
 ---
 

@@ -15,6 +15,18 @@ The capsule preserves high-value older context:
 It also keeps a zlib-compressed payload and Merkle root for auditability, but the
 LLM is given the extractive capsule, not opaque compressed bytes.
 
+## Measured on a public fixture
+
+On the 109-message fixture in `bench/fixtures`, with default settings, the model
+receives 2,061 estimated tokens per call (capsule of the older 99 messages plus
+the last 10 verbatim) instead of 7,281 for the full history. For 21 of 40
+questions written for that fixture, every answer keyword is still in that text
+(35 of 40 with the full history; 5 are not answerable from the fixture). This is
+keyword availability, not model-answer accuracy, which has not been measured.
+There is no retrieval: what the capsule drops does not reach the model. Method
+and reproduction: `docs/CONTEXT_CAPSULE_BENCHMARK.md` in the repository; how the
+data moves: `docs/CONTEXT_CAPSULE_DATAFLOW.md`.
+
 ## Safety and limits
 
 - **Lossy by design.** Older messages are not preserved verbatim in the model
