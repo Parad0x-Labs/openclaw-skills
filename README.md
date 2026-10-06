@@ -1,14 +1,16 @@
 <p align="center"><img src=".github/readme/banner.svg" alt="openclaw-skills — Agents that pay, charge and keep receipts, in one install" width="100%"></p>
 
+**Review:** [REVIEW.md](./REVIEW.md) lists what each component does, what has been demonstrated, where it runs and what is not established (generated from [evidence/claims.json](./evidence/claims.json)).
+
 **openclaw-skills is a set of drop-in skills that let AI agents on OpenClaw, and any MCP client such as Claude Desktop, Cursor or Windsurf, pay for services, charge for their own work, and keep long sessions cheap.**
 
 Agents increasingly call paid APIs and other agents, but they have no wallet-safe way to settle a bill. These skills add one: the agent pays in USDC on Solana through your own wallet, under a hard spending limit, and both sides keep a matching receipt. No platform holds the funds.
 
 ## At a glance
 
-| **7 npm packages** | **Non-custodial** | **103.9x** |
+| **7 npm packages** | **Non-custodial** | **114.7x** |
 |---|---|---|
-| Pay, charge, metered billing, context compression, MCP tools, identity and one-call setup, published under `@parad0x_labs`. | Your wallet signs every payment. The skill never sees a key, and the USDC cap is enforced before a transaction is built. | Liquefy vault compression on agent-trace fixtures, against 63.8x for zstd -19, with every archive round-trip verified. |
+| Pay, charge, metered billing, context compression, MCP tools, identity and one-call setup, published under `@parad0x_labs`. | Your wallet signs every payment. The skill never sees a key, and the USDC cap is enforced before a transaction is built (the 0.05% fee is added on top of the capped amount). | Liquefy vault compression on the CI JSON fixture, against 45.3x for zstd -19, with every archive round-trip verified; parity on VPC flow logs ([benchmarks/latest_ci.csv](./benchmarks/latest_ci.csv)). |
 
 [![CI](https://github.com/Parad0x-Labs/openclaw-skills/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Parad0x-Labs/openclaw-skills/actions/workflows/ci.yml)
 [![x402-pay on npm](https://img.shields.io/npm/v/@parad0x_labs/openclaw-x402-pay?style=flat&color=303030&labelColor=0a0a0a&label=x402-pay)](https://www.npmjs.com/package/@parad0x_labs/openclaw-x402-pay)
@@ -93,7 +95,8 @@ Companion: [`@parad0x_labs/null-mcp`](https://www.npmjs.com/package/@parad0x_lab
 
 | Component | Status | Notes |
 |---|---|---|
-| x402 pay and gate (`x402-pay`, `x402-gate`, `payment-session`) | **Usable today** | USDC on Solana, public beta. Devnet by default, mainnet-beta opt-in |
+| x402 pay and gate (`x402-pay`, `x402-gate`) | **Usable today** | USDC on Solana, public beta. Devnet by default, mainnet-beta opt-in |
+| Metered billing (`payment-session`) | **Usable today** | Bookkeeping over `pay_x402`; settled amounts are reported by the agent, not verified on-chain |
 | `context-capsule` | **Usable today** | Runs locally, no network |
 | `mcp-server` | **Usable today** | Quote, receipt hashing, identity lookup, `.null` resolution, stack status |
 | `agent-passport`, `web0-onboard` | **Usable today** | Identity lookup and storefront config. `.null` write builders are unavailable until the registrar relaunch |
@@ -105,7 +108,7 @@ Companion: [`@parad0x_labs/null-mcp`](https://www.npmjs.com/package/@parad0x_lab
 
 ## The vault appliance
 
-The second product in this repo is **Liquefy**, a Python flight recorder for agent runs, for teams that need an audit trail of what their agents did. It is independent of the skills above: they never import it, and three small skills (`liquefy-openclaw`, `liquefy_archive`, `liquefy_token_guard`) are its front-ends. It packs a run folder into compressed, optionally encrypted `.null` vaults, checks every archive by decompressing it and comparing hashes before accepting it, and keeps a SHA-256 hash-chained audit log. Vaults can be Ed25519-signed and their fingerprints anchored on Solana through an SPL Memo transaction, so a third party can confirm a vault existed without seeing its contents.
+The second product in this repo is **Liquefy**, a Python flight recorder for agent runs, for teams that need an audit trail of what their agents did. It is independent of the skills above: they never import it, and three small skills (`liquefy-openclaw`, `liquefy_archive`, `liquefy_token_guard`) are its front-ends. It packs a run folder into compressed, optionally encrypted `.null` vaults, checks every archive by decompressing it and comparing hashes before accepting it, and keeps a SHA-256 hash-chained audit log. Vaults can be Ed25519-signed and their fingerprints anchored on Solana as 64-bit hash prefixes in an SPL Memo transaction (default cluster mainnet; pass `--cluster devnet` for tests), so a third party can confirm a vault existed without seeing its contents.
 
 It ships 24 format-aware compression engines (JSON, logs, SQL, VPC flow, CloudTrail, screenshots and more) and a set of guards: policy enforcer with kill switch, context gate with replay blocking, safe run with automatic rollback, state and history guards, PII redaction and log de-noise.
 
