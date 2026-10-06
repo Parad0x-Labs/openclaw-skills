@@ -100,7 +100,7 @@ Companion: [`@parad0x_labs/null-mcp`](https://www.npmjs.com/package/@parad0x_lab
 | `.null` names (legacy mainnet registrar) | **Retired (mainnet 2026, records readable)** | Names registered June to August 2026 resolve read-only: owner, content pointer, x402 endpoint. Registration, updates and transfers are frozen |
 | Receipt anchoring (`receipt_anchor`) | **Built · redeploy pending** | Unavailable until the redeploy under a fresh key. Receipt hashes are still computed and kept locally |
 | Pay-by-name to a one-time stealth address | **Built · redeploy pending** | Implemented in code with tests; devnet redeploy under a fresh key pending |
-| Dark NULL privacy settlement | **Devnet** | Canonical program on devnet; no mainnet deployment |
+| Dark NULL proof-verified withdrawals | **Devnet** | Devnet prototype: amount, receiver token account, mint and note commitment are public, so a withdrawal is linkable to its deposit; unlinkable withdrawals are planned protocol work; no mainnet deployment |
 | Vault appliance (Liquefy) | **Usable today** | Python, runs locally. See below |
 
 ## The vault appliance
