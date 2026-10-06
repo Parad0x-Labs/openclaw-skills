@@ -15,7 +15,7 @@ under a fresh key (2026-10-06; see [Programs](#programs)); this release does not
 | `anchor_receipt` | Validate a 32-byte receipt hash for `receipt_anchor`. This server does not anchor: the tool returns a clear refusal and sends nothing |
 | `lookup_passport` | Read whether an ETH address or Solana wallet has a Dark Passport binding on the legacy mainnet program (retired; existing bindings readable) |
 | `build_outcome_receipt` | Build a signed outcome receipt with PnL, accuracy, or delivery result |
-| `compress_receipts` | Compress a batch of receipts (zlib deflate; Liquefy-format demo — the production columnar codec targets ~83x) |
+| `compress_receipts` | Compress a batch of receipts (zlib deflate; a Liquefy-format demo, not the Liquefy codec. Measured Liquefy ratios: [`benchmarks/latest_ci.csv`](https://github.com/Parad0x-Labs/openclaw-skills/blob/main/benchmarks/latest_ci.csv)) |
 | `resolve_null` | Resolve a `.null` name (read-only) on the legacy mainnet registrar — records readable, registration/updates frozen |
 | `check_nullifier` | Validate a privacy-proof nullifier. This server does not query a nullifier record program: the tool returns a clear refusal and makes no lookup. A devnet `dark_nullifier_record` runs at `CPMfXL73v9PDmxyPLTM97bzrNa5eg2AEpsac9XKzX9et` |
 | `private_compute` | Encrypt locally, send ciphertext to an executor, return input/result hashes; `anchor:true` computes the commitment locally (this server does not anchor on-chain) |

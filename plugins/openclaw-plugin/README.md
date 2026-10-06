@@ -36,7 +36,7 @@ git clone https://github.com/Parad0x-Labs/openclaw-skills.git && \
 When this package is published, prefer a pinned install:
 
 ```bash
-openclaw plugins install @parad0x-labs/liquefy-openclaw-plugin@0.2.0 --pin
+openclaw plugins install @parad0x_labs/liquefy-openclaw-plugin@0.2.1 --pin
 openclaw plugins enable liquefy
 openclaw gateway restart
 ```

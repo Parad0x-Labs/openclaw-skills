@@ -40,7 +40,7 @@ Repo-relative helper note:
 ## Optional plugin path
 
 Separate package:
-- `@parad0x-labs/liquefy-openclaw-plugin`
+- `@parad0x_labs/liquefy-openclaw-plugin`
 
 What the Node wrapper exposes:
 - `liquefy_scan`

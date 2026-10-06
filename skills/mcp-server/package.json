@@ -1,6 +1,6 @@
 {
   "name": "@parad0x_labs/mcp-server",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "MCP server for the Parad0x Labs stack: x402 payment quotes, receipt hashing, read-only .null and Dark Passport lookups, outcome receipts, Liquefy-format receipt compression",
   "type": "module",
   "bin": {

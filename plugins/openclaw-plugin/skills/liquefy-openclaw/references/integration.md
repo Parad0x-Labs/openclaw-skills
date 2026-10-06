@@ -5,7 +5,7 @@ Use this file when the user asks how the OpenClaw integration is installed, what
 ## Packaged OpenClaw plugin wrapper
 
 Package:
-- `@parad0x-labs/liquefy-openclaw-plugin`
+- `@parad0x_labs/liquefy-openclaw-plugin`
 
 What the Node wrapper actually exposes:
 - `liquefy_scan`

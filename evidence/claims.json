@@ -193,7 +193,7 @@
       "package_version": {
         "name": "@parad0x_labs/mcp-server",
         "package_json": "skills/mcp-server/package.json",
-        "git_version": "0.2.1",
+        "git_version": "0.2.2",
         "npm_latest": "0.2.0",
         "npm_checked_at": "2026-10-06T12:00:19Z"
       },
@@ -225,7 +225,7 @@
         "receipt anchoring: the server configures no receipt_anchor program and refuses; a devnet receipt_anchor runs at HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs since 2026-10-06"
       ],
       "operational_limitations": [
-        "0.2.1 (Git, not on npm; npm latest 0.2.0) carries the 6be29cf refusal text that names the devnet receipt_anchor and dark_nullifier_record; npm 0.2.0 carries the earlier wording."
+        "0.2.2 (Git, not on npm; npm latest 0.2.0) carries the 6be29cf refusal text that names the devnet receipt_anchor and dark_nullifier_record, and compress_receipts no longer cites an unbenchmarked Liquefy ratio; npm 0.2.0 carries the earlier wording."
       ],
       "supersedes": null
     },

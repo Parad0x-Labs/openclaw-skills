@@ -4,7 +4,7 @@ This document defines the publish flow for the Liquefy OpenClaw plugin wrapper a
 
 ## Package
 
-- npm package name: `@parad0x-labs/liquefy-openclaw-plugin`
+- npm package name: `@parad0x_labs/liquefy-openclaw-plugin`
 - Plugin manifest: `plugins/openclaw-plugin/openclaw.plugin.json`
 - Runtime wrapper: `plugins/openclaw-plugin/dist/*.js`
 - Skill pack scaffold: `plugins/openclaw-plugin/skills/liquefy-openclaw/SKILL.md`
@@ -14,7 +14,7 @@ This document defines the publish flow for the Liquefy OpenClaw plugin wrapper a
 Prefer pinned plugin versions:
 
 ```bash
-openclaw plugins install @parad0x-labs/liquefy-openclaw-plugin@0.1.0-alpha --pin
+openclaw plugins install @parad0x_labs/liquefy-openclaw-plugin@0.2.1 --pin
 openclaw plugins enable liquefy
 openclaw gateway restart
 ```

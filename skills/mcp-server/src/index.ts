@@ -383,7 +383,7 @@ function compressReceipts(receipts: object[]): object {
     merkle_root_hex: merkleRootHex,
     receipt_count: receipts.length,
     note:
-      "Compressed with zlib deflate (level 9) as a format demonstration. Real Liquefy achieves ~83x via columnar layout + domain-aware encoding on typed receipt fields. Decompress with zlib inflate.",
+      "Compressed with zlib deflate (level 9) as a format demonstration; this is not the Liquefy codec. Liquefy ratios depend on the input format; measured results are in openclaw-skills benchmarks/latest_ci.csv. Decompress with zlib inflate.",
   };
 }
 
@@ -568,7 +568,7 @@ function getStackStatus(): object {
 // ---------------------------------------------------------------------------
 
 const server = new Server(
-  { name: "parad0x-mcp", version: "0.2.1" },
+  { name: "parad0x-mcp", version: "0.2.2" },
   {
     capabilities: {
       tools: {},
@@ -670,7 +670,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "compress_receipts",
         description:
-          "Compress a batch of receipts (zlib deflate level 9; Liquefy-format demonstration). The production Liquefy columnar codec targets ~83x; this tool ships the zlib reference path.",
+          "Compress a batch of receipts (zlib deflate level 9; Liquefy-format demonstration). This tool ships the zlib reference path, not the Liquefy codec.",
         inputSchema: {
           type: "object",
           properties: {
