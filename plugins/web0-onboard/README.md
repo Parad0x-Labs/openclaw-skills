@@ -1,4 +1,4 @@
-# @parad0x_labs/openclaw-web0-onboard 🚀
+# @parad0x_labs/openclaw-web0-onboard
 
 **One call sets your agent up on web0** — identity, a paid x402 storefront, the
 receipt-anchoring status, and the `.null` name status. Sell services for USDC on Solana; funds

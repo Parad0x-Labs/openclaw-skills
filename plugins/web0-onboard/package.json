@@ -1,10 +1,15 @@
 {
   "name": "@parad0x_labs/openclaw-web0-onboard",
-  "version": "0.1.0",
-  "description": "OpenClaw plugin — one-call web0 setup: identity, a paid x402 storefront, receipt-anchoring status, and a .null name-binding plan",
+  "version": "0.2.0",
+  "description": "OpenClaw plugin — one-call web0 setup: identity, a paid x402 storefront, receipt-anchoring status, and .null name status (legacy registrar read-only)",
   "type": "module",
   "main": "./src/index.ts",
-  "files": ["src/", "openclaw.plugin.json", "SKILL.md", "README.md"],
+  "files": [
+    "src/",
+    "openclaw.plugin.json",
+    "SKILL.md",
+    "README.md"
+  ],
   "keywords": [
     "openclaw",
     "openclaw-plugin",
@@ -33,12 +38,20 @@
     "@types/node": "^22.0.0",
     "typescript": "^5.6.0"
   },
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "license": "MIT",
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Parad0x-Labs/openclaw-skills",
+    "url": "https://github.com/Parad0x-Labs/openclaw-skills.git",
     "directory": "plugins/web0-onboard"
+  },
+  "homepage": "https://github.com/Parad0x-Labs/openclaw-skills/tree/main/plugins/web0-onboard#readme",
+  "bugs": {
+    "url": "https://github.com/Parad0x-Labs/openclaw-skills/issues"
   }
 }
