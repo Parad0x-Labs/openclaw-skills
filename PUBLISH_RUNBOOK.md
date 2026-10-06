@@ -14,13 +14,13 @@ one `npm publish <file>.tgz --access public` per package.
 | `@parad0x_labs/openclaw-payment-session` | 0.1.1 | `plugins/payment-session` 0.1.2 | `parad0x_labs-openclaw-payment-session-0.1.2.tgz` | same as agent-passport |
 | `@parad0x_labs/openclaw-web0-onboard` | 0.2.0 | `plugins/web0-onboard` 0.2.1 | `parad0x_labs-openclaw-web0-onboard-0.2.1.tgz` | same as agent-passport, plus the devnet `receipt_anchor` text; the write tools refuse the devnet dna-x402 NullPay registrar (different instruction set) |
 | `@parad0x_labs/openclaw-context-capsule` | 1.7.1 | `skills/context-capsule` 1.7.2 | `parad0x_labs-openclaw-context-capsule-1.7.2.tgz` | 1.7.1 reads settings from the wrong level of the plugin entry, so configured values never reach the engine |
-| `@parad0x_labs/mcp-server` | 0.2.0 | `skills/mcp-server` 0.2.1 | `parad0x_labs-mcp-server-0.2.1.tgz` | refusal text names the devnet `receipt_anchor` and `dark_nullifier_record` |
-| `@parad0x-labs/liquefy-openclaw-plugin` | not published | `plugins/openclaw-plugin` 0.2.0 | `parad0x-labs-liquefy-openclaw-plugin-0.2.0.tgz` | first release; migrated to `defineToolPlugin`. The name uses the `@parad0x-labs` scope, not `@parad0x_labs`: confirm that scope (or rename) before publishing |
+| `@parad0x_labs/mcp-server` | 0.2.0 | `skills/mcp-server` 0.2.2 | `parad0x_labs-mcp-server-0.2.2.tgz` | refusal text names the devnet `receipt_anchor` and `dark_nullifier_record`; `compress_receipts` no longer cites an unbenchmarked Liquefy ratio |
+| `@parad0x_labs/liquefy-openclaw-plugin` | not published | `plugins/openclaw-plugin` 0.2.1 | `parad0x_labs-liquefy-openclaw-plugin-0.2.1.tgz` | first release; migrated to `defineToolPlugin`. Renamed from the `@parad0x-labs` scope, which does not exist on npm |
 
 `@parad0x_labs/null-mcp` and `@parad0x_labs/web0-tip` live in the private packages
 repository, not here.
 
-Release tarballs (built from commit `2554a17`; web0-onboard from `c491171`, the other packages are unchanged between the two):
+Release tarballs (built from commit `2554a17`; web0-onboard from `c491171`; mcp-server and liquefy-openclaw-plugin from `5ebdeff`; the other packages are unchanged between these commits):
 
 | Tarball | Files | Size (bytes) | sha256 |
 |---|---:|---:|---|
@@ -30,8 +30,8 @@ Release tarballs (built from commit `2554a17`; web0-onboard from `c491171`, the 
 | `parad0x_labs-openclaw-payment-session-0.1.2.tgz` | 8 | 7247 | `3c204602ce777fae9fc82de9901503af07a4d5a8b59e99ae974a84ce72235343` |
 | `parad0x_labs-openclaw-web0-onboard-0.2.1.tgz` | 8 | 17456 | `8f42bb483a8f360e610bfced1b0819046572ab91b70e5982bcfc28458aabea1c` |
 | `parad0x_labs-openclaw-context-capsule-1.7.2.tgz` | 11 | 31259 | `d3ec7ce9271ebb107b6a9c595e0f774075683ff43183698434ffeb3508e86763` |
-| `parad0x_labs-mcp-server-0.2.1.tgz` | 22 | 31493 | `7195b182f51b976a1899fb576ed2ee158da23c30f4ae01a2b8a1ac105dcd95ca` |
-| `parad0x-labs-liquefy-openclaw-plugin-0.2.0.tgz` | 11 | 13299 | `b3ec230300e0b2a4eb559274737d14aea4ba4f70558c5b712e0390ac1bd3ab03` |
+| `parad0x_labs-mcp-server-0.2.2.tgz` | 22 | 31538 | `7771b35cc03bc79b0ea757f75649af53dee367f75d2ca64f3e1c528338b286e8` |
+| `parad0x_labs-liquefy-openclaw-plugin-0.2.1.tgz` | 11 | 13301 | `0133ede60ffc5ef23aec862f25a451a7d616240c0a170d42bbd7017b3a4bdb9d` |
 
 No tarball carries a preinstall, install, postinstall or prepare script.
 
@@ -79,8 +79,8 @@ plugin.
 | payment-session | 12/12 |
 | web0-onboard | 44/44 (at `c491171`) |
 | context-capsule | all 7 `npm test` stages pass; fixture bench matches `bench/results/latest.json`; `test/plugin-load.test.mjs` passes against the real SDK |
-| mcp-server | 29/29, `test/server.smoke.mjs` 2/2 |
-| liquefy-openclaw-plugin | 10/10 |
+| mcp-server | 29/29, `test/server.smoke.mjs` 2/2 (also at `5ebdeff`) |
+| liquefy-openclaw-plugin | 10/10 (also at `5ebdeff`) |
 
 ## After publishing
 

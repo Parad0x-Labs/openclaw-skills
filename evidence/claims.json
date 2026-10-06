@@ -184,7 +184,7 @@
       "id": "mcp-server.read-tools",
       "plain_claim": "The MCP server exposes quote, receipt hashing, identity lookup, .null resolution and stack status tools without submitting transactions.",
       "component": "skills/mcp-server",
-      "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+      "source_sha": "5ebdeffd309379280db01079961d5602a2f4775c",
       "source_paths": [
         "skills/mcp-server/src/index.ts",
         "skills/mcp-server/src/anchor.ts"
@@ -213,7 +213,7 @@
       "test_run": {
         "result": "pass",
         "date": "2026-10-06",
-        "environment": "node:22 container, network off, sources from git archive of c103eac",
+        "environment": "node:22 container, network off, sources from git archive of 5ebdeff",
         "command": "npm test (skills/mcp-server)",
         "note": "29 of 29 passed"
       },
