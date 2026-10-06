@@ -97,7 +97,7 @@ export interface UnsignedPayment {
  * untrusted challenge — a greedy seller can't zero the fee, nor a malicious challenge
  * redirect it. The gate enforces the matching fee leg at settlement (confirmOnChain).
  *
- * ⚠️ UNGUARDED low-level builder. It does NOT enforce the spend cap, mainnet
+ * WARNING: UNGUARDED low-level builder. It does NOT enforce the spend cap, mainnet
  * opt-in, USDC-only asset, recipient allowlist, or distinct-recipient cap — all of
  * those live in selectRequirement()/fetchWithX402(). It also assumes USDC's 6
  * decimals for the (unchecked) req.asset. Drive payments through fetchWithX402; use

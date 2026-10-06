@@ -37,7 +37,11 @@
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Parad0x-Labs/openclaw-skills",
+    "url": "https://github.com/Parad0x-Labs/openclaw-skills.git",
     "directory": "plugins/payment-session"
+  },
+  "homepage": "https://github.com/Parad0x-Labs/openclaw-skills/tree/main/plugins/payment-session#readme",
+  "bugs": {
+    "url": "https://github.com/Parad0x-Labs/openclaw-skills/issues"
   }
 }
