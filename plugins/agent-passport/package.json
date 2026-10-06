@@ -1,7 +1,7 @@
 {
   "name": "@parad0x_labs/openclaw-agent-passport",
-  "version": "0.1.1",
-  "description": "OpenClaw plugin — read-only agent identity lookups for the web0 stack (legacy ETH↔Solana bindings and WebAuthn vault accounts)",
+  "version": "0.2.0",
+  "description": "OpenClaw plugin — read-only agent identity lookups for the web0 stack (legacy ETH↔Solana bindings)",
   "type": "module",
   "main": "./src/index.ts",
   "files": [
