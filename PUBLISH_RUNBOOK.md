@@ -20,18 +20,18 @@ one `npm publish <file>.tgz --access public` per package.
 `@parad0x_labs/null-mcp` and `@parad0x_labs/web0-tip` live in the private packages
 repository, not here.
 
-Release tarballs (built from commit `2554a17`; web0-onboard from `c491171`; mcp-server and liquefy-openclaw-plugin from `5ebdeff`; the other packages are unchanged between these commits):
+Release tarballs (seven rebuilt from commit `d70d148` after the dependency fixes; each differs from its previous build only in `package.json`, which gains `overrides`, and mcp-server's `@modelcontextprotocol/sdk` floor of `^1.31.0`; context-capsule is unchanged from `2554a17`):
 
 | Tarball | Files | Size (bytes) | sha256 |
 |---|---:|---:|---|
-| `parad0x_labs-openclaw-x402-pay-2.0.2.tgz` | 16 | 41027 | `b24d5391dc37f282a6df47079feffbfb99278330a3ba2a2b77c5e38b602d7703` |
-| `parad0x_labs-openclaw-x402-gate-2.0.2.tgz` | 15 | 33246 | `6824a5e911a474d6559354cca69be9bb52fe539f25f6301d736d09abbcd0a708` |
-| `parad0x_labs-openclaw-agent-passport-0.2.1.tgz` | 7 | 7087 | `baa145c9f81abb84ba29fc93d787767fe7643a77deeb58b7d805137e11e31f8b` |
-| `parad0x_labs-openclaw-payment-session-0.1.2.tgz` | 8 | 7247 | `3c204602ce777fae9fc82de9901503af07a4d5a8b59e99ae974a84ce72235343` |
-| `parad0x_labs-openclaw-web0-onboard-0.2.1.tgz` | 8 | 17456 | `8f42bb483a8f360e610bfced1b0819046572ab91b70e5982bcfc28458aabea1c` |
+| `parad0x_labs-openclaw-x402-pay-2.0.2.tgz` | 16 | 41055 | `1e9ab4e4d4172eadf833c56e7decf6c331130d3079a8a4ebaa58d059a5e43ec3` |
+| `parad0x_labs-openclaw-x402-gate-2.0.2.tgz` | 15 | 33272 | `8447d20dff695691ce38fbc196a224909a150e37d215d5d1cf0197561a514659` |
+| `parad0x_labs-openclaw-agent-passport-0.2.1.tgz` | 7 | 7120 | `815493f0e5a811f82ba8a8c5d13ca741d66e406acc39d5cc9d78dce2d8d12c53` |
+| `parad0x_labs-openclaw-payment-session-0.1.2.tgz` | 8 | 7277 | `fa0d2d5ededeb305bab8fe613afd6f1cff41b2b0458a5a68de9584088e0260f8` |
+| `parad0x_labs-openclaw-web0-onboard-0.2.1.tgz` | 8 | 17494 | `4ff547e950c02b868aca108b1d9bd4edfad3ef76f239f027b819507509d1cfac` |
 | `parad0x_labs-openclaw-context-capsule-1.7.2.tgz` | 11 | 31259 | `d3ec7ce9271ebb107b6a9c595e0f774075683ff43183698434ffeb3508e86763` |
-| `parad0x_labs-mcp-server-0.2.2.tgz` | 22 | 31538 | `7771b35cc03bc79b0ea757f75649af53dee367f75d2ca64f3e1c528338b286e8` |
-| `parad0x_labs-liquefy-openclaw-plugin-0.2.1.tgz` | 11 | 13301 | `0133ede60ffc5ef23aec862f25a451a7d616240c0a170d42bbd7017b3a4bdb9d` |
+| `parad0x_labs-mcp-server-0.2.2.tgz` | 22 | 31553 | `bc31e31c97fdc069108cabf5629ac0802827be5286765536e9ba0fae1be823d6` |
+| `parad0x_labs-liquefy-openclaw-plugin-0.2.1.tgz` | 11 | 13326 | `eea8e687f9146bf7b8c68d0f13d387db9304850471d104008785178e33b269d2` |
 
 No tarball carries a preinstall, install, postinstall or prepare script.
 
@@ -45,7 +45,7 @@ In an isolated container, never on a host that holds keys:
    (file list, no lifecycle scripts, no keys, no retired program ID as a default).
 4. The owner publishes the file: `npm publish <file>.tgz --access public`.
 
-## OpenClaw host contract (checked against OpenClaw 2026.6.9 and 2026.9.8)
+## OpenClaw host contract (checked against OpenClaw 2026.6.9, 2026.9.2 and 2026.9.8)
 
 A plugin that misses any of these does not load, or loads without tools:
 
@@ -67,9 +67,11 @@ All eight packages above were loaded with `openclaw plugins inspect <id> --runti
 on 2026.6.9 (Node 22) and on 2026.9.8 (Node 24, which that release requires): every
 declared tool registered, `/liquefy_status` registered, context-capsule registered
 its engine, and the only diagnostic was the provenance warning for a path-loaded
-plugin.
+plugin. After the dependency fixes at `d70d148`, the six tool plugins were linked
+into OpenClaw 2026.9.2 (Node 22.23.3, the lockfiles' dev host) and loaded the same
+way; `openclaw plugins validate` reports each as valid.
 
-## Test results at `2554a17` (container, network off)
+## Test results at `d70d148` (container, network off; context-capsule at `2554a17`)
 
 | Package | Result |
 |---|---|
@@ -77,10 +79,10 @@ plugin.
 | x402-gate | 14/14 (`test/rep.test.mts` skips without the circuit artifacts) |
 | agent-passport | 16/16 |
 | payment-session | 12/12 |
-| web0-onboard | 44/44 (at `c491171`) |
+| web0-onboard | 44/44 |
 | context-capsule | all 7 `npm test` stages pass; fixture bench matches `bench/results/latest.json`; `test/plugin-load.test.mjs` passes against the real SDK |
-| mcp-server | 29/29, `test/server.smoke.mjs` 2/2 (also at `5ebdeff`) |
-| liquefy-openclaw-plugin | 10/10 (also at `5ebdeff`) |
+| mcp-server | 29/29, `test/server.smoke.mjs` 2/2 |
+| liquefy-openclaw-plugin | 10/10 |
 
 ## After publishing
 
