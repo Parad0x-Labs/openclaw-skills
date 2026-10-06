@@ -31,11 +31,13 @@ Solana — without ever handing the skill a private key.
 - **Install with `--ignore-scripts`** (required): this skill runs where the payment
   key lives; never let a transitive native addon run install-time code on that host.
 - **Real-money is opt-in**; set `allowMainnet: true` to enable mainnet (also needs `rpcUrl`).
-- **Hard `maxAmountUsdc` cap**, enforced before any transaction is built.
+- **Hard `maxAmountUsdc` cap on the seller amount**, enforced before any transaction is built.
+  The 0.05% (5 bps) protocol fee is a second transfer added **on top**: the total debit is
+  `amount + ceil(amount × 0.05%)`, so it can exceed `maxAmountUsdc` by up to 0.05%.
 - **Minimal network**: your Solana RPC + the target URL only. No telemetry.
 
 > **Non-custodial and spend-capped by design** — your agent signs with its own
-> wallet; no single payment exceeds your cap.
+> wallet; no seller amount exceeds your cap (the 5 bps protocol fee is added on top).
 
 ## Tools
 

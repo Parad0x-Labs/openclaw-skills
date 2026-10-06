@@ -17,8 +17,9 @@ the receipt hash carried in a Memo. There is no custom settlement program to tru
   signer, and broadcasts the signed bytes. **It never holds, requests, or reads a
   private key.**
 - **Devnet by default.** Real-money mainnet payments require `allowMainnet: true`.
-- **Hard spend cap.** `maxAmountUsdc` is enforced *before any transaction is
-  built*. A 402 demanding more is refused.
+- **Hard spend cap.** `maxAmountUsdc` is enforced on the seller amount *before any
+  transaction is built*. A 402 demanding more is refused. The protocol fee below is
+  added on top of the capped amount.
 - **Minimal network surface.** Talks only to your configured Solana RPC and the
   target URL. No telemetry, no third-party calls.
 - **Protocol fee (0.05%).** Each payment adds a second leg — a **5 bps** transfer to
@@ -86,7 +87,7 @@ paid the same way.
 
 | Key | Default | Description |
 |---|---|---|
-| `maxAmountUsdc` | `1.0` | Hard per-payment USDC cap, enforced before building any tx |
+| `maxAmountUsdc` | `1.0` | Hard per-payment cap on the seller amount, enforced before building any tx; the 5 bps fee is added on top |
 | `allowMainnet` | `false` | Must be `true` to authorize mainnet (real-money) payments |
 | `rpcUrl` | public RPC | Optional Solana RPC override |
 
