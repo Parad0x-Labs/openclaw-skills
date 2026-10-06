@@ -12,7 +12,6 @@ import { createHash } from "node:crypto";
 
 import {
   DARK_SECP256K1_AUTH,
-  DARK_SECP256R1_VAULT,
   RECEIPT_ANCHOR,
   DEFAULT_RPC,
   PROGRAMS,
@@ -20,13 +19,14 @@ import {
   readConfig,
   deriveEthBindingPda,
   deriveSolAgentPda,
-  deriveWebAuthnVaultPda,
   buildPassportTools,
 } from "../dist/passport.js";
 
-const SEIZED = ["EepqzVBNuzCgD6XGiB19pDDhzFG3gUL4z1nabBYxpfjS"];
-// SHA-256 of compromised program IDs this repo once referenced (held hashed, never named).
+// SHA-256 of compromised program IDs this repo once referenced (held hashed, never named),
+// including the gen-1 x402 access gate and the secp256r1 vault.
 const COMPROMISED_SHA256 = new Set([
+  "d8406486dd119717648b5b6e6f4b8b9a044536b3ab95c34da437add15c5cac36",
+  "efa8237fa114259344b44de2f79c21583ec464ffe5186876c35595bbd11983a1",
   "a7656054f294394e546b39f90c03a0cb31446ac46c37285f5bfc900b3bcea827",
   "35a832bc1dff671d6a806d63ea404ed181ed9675c49d513889e4a3aabda68423",
   "7abaeaa69c452dd5349bbde0858b343984fdef2e1bf32359248915b777c535bc",
@@ -41,8 +41,7 @@ const SAMPLE_WALLET = "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"; // a valid
 // ── program IDs / RPC ─────────────────────────────────────────────────────────
 
 test("no seized pre-incident program ID is referenced", () => {
-  for (const id of [DARK_SECP256K1_AUTH, DARK_SECP256R1_VAULT, RECEIPT_ANCHOR]) {
-    assert.ok(!SEIZED.includes(id), `${id} is a seized ID and must not be used`);
+  for (const id of [DARK_SECP256K1_AUTH, RECEIPT_ANCHOR, ...Object.values(PROGRAMS)]) {
     assert.ok(!COMPROMISED_SHA256.has(sha256(id)), `${id} is a compromised ID and must not be used`);
   }
   for (const v of Object.values(PROGRAM_STATUS)) {
@@ -57,9 +56,9 @@ test("default RPC is the approved public node (never api.mainnet-beta)", () => {
   assert.doesNotMatch(DEFAULT_RPC, /api\.mainnet-beta\.solana\.com/);
 });
 
-test("PROGRAMS maps the three legacy mainnet program IDs", () => {
+test("PROGRAMS maps exactly the two legacy mainnet program IDs (no WebAuthn vault)", () => {
+  assert.deepEqual(Object.keys(PROGRAMS).sort(), ["dark_secp256k1_auth", "receipt_anchor"]);
   assert.equal(PROGRAMS.dark_secp256k1_auth, DARK_SECP256K1_AUTH);
-  assert.equal(PROGRAMS.dark_secp256r1_vault, DARK_SECP256R1_VAULT);
   assert.equal(PROGRAMS.receipt_anchor, RECEIPT_ANCHOR);
 });
 
@@ -86,29 +85,22 @@ test("deriveEthBindingPda: rejects malformed addresses", () => {
   assert.equal(deriveEthBindingPda(""), null);
 });
 
-test("deriveSolAgentPda + deriveWebAuthnVaultPda: deterministic, distinct, correct seeds", () => {
+test("deriveSolAgentPda: deterministic, correct seeds", () => {
   const sol = deriveSolAgentPda(SAMPLE_WALLET);
-  const vault = deriveWebAuthnVaultPda(SAMPLE_WALLET);
-  assert.ok(sol && vault);
+  assert.ok(sol);
   assert.equal(sol, deriveSolAgentPda(SAMPLE_WALLET));
-  assert.notEqual(sol, vault, "sol_agent and webauthn_vault PDAs must differ");
 
   const wallet = new PublicKey(SAMPLE_WALLET);
   const [expSol] = PublicKey.findProgramAddressSync(
     [Buffer.from("sol_agent"), wallet.toBytes()],
     new PublicKey(DARK_SECP256K1_AUTH),
   );
-  const [expVault] = PublicKey.findProgramAddressSync(
-    [Buffer.from("webauthn_vault"), wallet.toBytes()],
-    new PublicKey(DARK_SECP256R1_VAULT),
-  );
   assert.equal(sol, expSol.toBase58());
-  assert.equal(vault, expVault.toBase58());
 });
 
 test("PDA derivers return null on malformed wallet", () => {
   assert.equal(deriveSolAgentPda("not-a-pubkey"), null);
-  assert.equal(deriveWebAuthnVaultPda("???"), null);
+  assert.equal(deriveSolAgentPda("???"), null);
 });
 
 // ── config ────────────────────────────────────────────────────────────────────
@@ -184,4 +176,6 @@ test("verify_agent_identity result carries program_status (fake connection, no n
   assert.equal(res.ok, true);
   assert.deepEqual(res.program_status, PROGRAM_STATUS);
   assert.equal(res.registered.sol_agent, false);
+  assert.equal("webauthn_vault" in res.registered, false);
+  assert.equal("webauthn_vault_pda" in res.pdas, false);
 });

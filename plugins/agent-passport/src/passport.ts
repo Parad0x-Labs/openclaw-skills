@@ -21,16 +21,15 @@ import { Connection, PublicKey } from "@solana/web3.js";
 
 // ── Program IDs — legacy mainnet deployments (retired; accounts readable) ─────
 // Lookups here are read-only account-existence checks against existing bindings.
-// Do NOT add dark_x402_access_gate or dark_nullifier_record here — those are
-// seized pre-incident IDs.
+// Do NOT add dark_x402_access_gate, dark_nullifier_record or the secp256r1
+// vault here — those programs are attacker-controlled. The WebAuthn vault
+// lookup was removed in 0.2.0 for that reason.
 
 export const DARK_SECP256K1_AUTH = "AqwBbV13AoczhoELwP8oxT3nDqB6MsLWXauNzHkssZ9B";
-export const DARK_SECP256R1_VAULT = "3hbbtjeSrTVYXq6eRwjeofDe2DCPh3n8cfN6kZcQfewi";
 export const RECEIPT_ANCHOR = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN";
 
 export const PROGRAMS = {
   dark_secp256k1_auth: DARK_SECP256K1_AUTH,
-  dark_secp256r1_vault: DARK_SECP256R1_VAULT,
   receipt_anchor: RECEIPT_ANCHOR,
 } as const;
 
@@ -38,8 +37,6 @@ export const PROGRAMS = {
 export const PROGRAM_STATUS = {
   dark_secp256k1_auth:
     "retired (mainnet) — existing ETH↔Solana bindings readable; no new bindings can be created",
-  dark_secp256r1_vault:
-    "retired (mainnet) — existing WebAuthn vault accounts readable; no new vaults can be created",
   receipt_anchor:
     "retired 2026-07-14 (mainnet) — historical anchors readable; receipt anchoring is unavailable until the redeploy under a fresh key",
 } as const satisfies Record<keyof typeof PROGRAMS, string>;
@@ -109,24 +106,6 @@ export function deriveSolAgentPda(solanaWallet: string): string | null {
   }
 }
 
-/**
- * Derive the WebAuthn vault PDA on dark_secp256r1_vault for a Solana wallet.
- * Seeds: ["webauthn_vault", <wallet pubkey bytes>]. Null if malformed.
- */
-export function deriveWebAuthnVaultPda(solanaWallet: string): string | null {
-  try {
-    const walletKey = new PublicKey(solanaWallet);
-    const programId = new PublicKey(DARK_SECP256R1_VAULT);
-    const [pda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("webauthn_vault"), walletKey.toBytes()],
-      programId,
-    );
-    return pda.toBase58();
-  } catch {
-    return null;
-  }
-}
-
 /** True if a PDA account exists on-chain (any non-null account counts). */
 export async function accountExists(connection: Connection, pda: string): Promise<boolean> {
   try {
@@ -169,15 +148,9 @@ export function buildPassportTools(config: AgentPassportConfig): ToolDef[] {
         ? deriveEthBindingPda(config.ethAddress)
         : null;
 
-      const [ethBindingRegistered, webauthnVaultRegistered] = await Promise.all([
-        ethBindingPda ? accountExists(connection, ethBindingPda) : Promise.resolve(false),
-        config.solanaWallet
-          ? (async () => {
-              const vaultPda = deriveWebAuthnVaultPda(config.solanaWallet!);
-              return vaultPda ? accountExists(connection, vaultPda) : false;
-            })()
-          : Promise.resolve(false),
-      ]);
+      const ethBindingRegistered = ethBindingPda
+        ? await accountExists(connection, ethBindingPda)
+        : false;
 
       return {
         null_name: config.nullName ?? null,
@@ -185,7 +158,6 @@ export function buildPassportTools(config: AgentPassportConfig): ToolDef[] {
         eth_address: config.ethAddress ?? null,
         eth_binding_pda: ethBindingPda,
         eth_binding_registered: ethBindingRegistered,
-        webauthn_vault_registered: webauthnVaultRegistered,
         network: "solana-mainnet" as const,
         programs: PROGRAMS,
         program_status: PROGRAM_STATUS,
@@ -237,14 +209,11 @@ export function buildPassportTools(config: AgentPassportConfig): ToolDef[] {
 
       const ethBindingPda = targetEth ? deriveEthBindingPda(targetEth) : null;
       const solAgentPda = targetWallet ? deriveSolAgentPda(targetWallet) : null;
-      const webAuthnVaultPda = targetWallet ? deriveWebAuthnVaultPda(targetWallet) : null;
 
-      const [ethBindingRegistered, solAgentRegistered, webauthnVaultRegistered] =
-        await Promise.all([
-          ethBindingPda ? accountExists(connection, ethBindingPda) : Promise.resolve(false),
-          solAgentPda ? accountExists(connection, solAgentPda) : Promise.resolve(false),
-          webAuthnVaultPda ? accountExists(connection, webAuthnVaultPda) : Promise.resolve(false),
-        ]);
+      const [ethBindingRegistered, solAgentRegistered] = await Promise.all([
+        ethBindingPda ? accountExists(connection, ethBindingPda) : Promise.resolve(false),
+        solAgentPda ? accountExists(connection, solAgentPda) : Promise.resolve(false),
+      ]);
 
       return {
         ok: true,
@@ -256,12 +225,10 @@ export function buildPassportTools(config: AgentPassportConfig): ToolDef[] {
         pdas: {
           eth_binding_pda: ethBindingPda,
           sol_agent_pda: solAgentPda,
-          webauthn_vault_pda: webAuthnVaultPda,
         },
         registered: {
           eth_binding: ethBindingRegistered,
           sol_agent: solAgentRegistered,
-          webauthn_vault: webauthnVaultRegistered,
         },
         network: "solana-mainnet" as const,
         programs: PROGRAMS,
