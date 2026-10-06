@@ -1,6 +1,6 @@
 # openclaw-x402-pay — self-custody x402 payments for OpenClaw agents
 
-> 💜 If it earns its keep, [star openclaw-skills](https://github.com/Parad0x-Labs/openclaw-skills) — stars are how agent builders find it. (ClawHub listing: pending publish.)
+> If it earns its keep, [star openclaw-skills](https://github.com/Parad0x-Labs/openclaw-skills) — stars are how agent builders find it.
 
 Give your agent one tool — `pay_x402` — that fetches an x402-gated URL and, if it
 answers HTTP **402 Payment Required**, pays for it on Solana and returns the
@@ -63,6 +63,11 @@ pay_x402({ url: "https://api.example.com/premium" })
 → { ok, status, body, paymentSignature, receiptHash, amountUsdc, feeUsdc, payTo, network }
 ```
 
+`url` may also be a `name.null`. The name is resolved read-only on the legacy mainnet
+`.null` registrar (`NXgQhepF…`, retired 2026-08-29; existing records stay readable,
+registration and updates are frozen) to its published x402 endpoint, which is then
+paid the same way.
+
 ## Config
 
 ```jsonc
@@ -100,7 +105,8 @@ pay_x402({ url: "https://api.example.com/premium" })
 ## No external @parad0x_labs dependency
 
 The Solana-specific constants and the x402 wire types are vendored inline. Runtime
-deps are only the well-known `@solana/web3.js` and `@solana/spl-token`.
+deps are `@solana/web3.js`, `bs58`, `typebox` (tool parameter schemas), and `snarkjs`
++ `poseidon-lite` (track-record proofs).
 
 ## Source
 

@@ -25,7 +25,7 @@ import { createHash } from "crypto";
  *  opts.registrar. NEVER the seized pre-incident registrar. */
 export const NULL_REGISTRAR_MAINNET = "NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np";
 
-/** Keyless public-node mainnet RPC for resolution reads (the legacy registrar's records live on mainnet). */
+/** Keyless public-node mainnet RPC for resolution reads (the legacy registrar's records are stored on mainnet). */
 export const RESOLVE_RPC_MAINNET = "https://solana-rpc.publicnode.com";
 
 const ND_DISC = 0x4e; // 'N'
