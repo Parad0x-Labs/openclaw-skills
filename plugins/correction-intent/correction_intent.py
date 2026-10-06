@@ -186,7 +186,7 @@ def correction_chain_receipt(state: ActiveState, session_id: str = "") -> dict:
         "session_id": session_id,
         "corrections": chain,
         "chain_root": chain_root,
-        "anchor_note": f"anchor chain_root on Solana via receipt_anchor (6HSRGivd...)",
+        "anchor_note": "receipt anchoring is unavailable until the redeploy under a fresh key; keep chain_root to anchor later",
     }
 
 

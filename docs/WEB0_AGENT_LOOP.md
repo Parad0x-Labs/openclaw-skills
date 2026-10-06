@@ -9,7 +9,7 @@ key.
 |---|---|---|
 | 1. Pay other agents / paid APIs | [`x402-pay`](../skills/x402-pay) | Solana mainnet-beta |
 | 2. Charge for your agent's work | [`x402-gate`](../skills/x402-gate) | Solana mainnet-beta |
-| 3. Anchor receipts on-chain | `receipt_anchor` | Solana devnet |
+| 3. Keep verifiable receipts | x402-gate + x402-pay receipt hashes | local (on-chain anchoring after the redeploy) |
 | 4. Keep long sessions cheap | [`context-capsule`](../skills/context-capsule) | npm |
 
 ---
@@ -31,13 +31,14 @@ you serve only after the transaction settles on-chain. Funds land directly in
 your own wallet — the skill holds no keys. The paying and charging sides derive
 identical receipt hashes, so the loop reconciles with no shared state.
 
-## 3 · Anchor receipts on-chain
+## 3 · Keep verifiable receipts
 
-Anchor a 32-byte hash of anything — a payment receipt, a page manifest — via
-`receipt_anchor` on devnet (`CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst`): a verifiable
-trail with no data and no keys on-chain. The mainnet deployment
-(`6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN`) anchored receipts June–July 2026 and is
-retired; those historical anchors remain readable.
+The paying and charging sides derive identical 32-byte receipt hashes for every
+sale, so each party holds a matching record with no shared state. Anchoring those
+hashes on-chain with `receipt_anchor` is unavailable until the redeploy under a
+fresh key; `anchor_receipt` in `mcp-server` returns that refusal and sends nothing.
+The mainnet deployment (`6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN`) anchored
+receipts June–July 2026 and is retired; those historical anchors remain readable.
 
 ## 4 · Keep long sessions cheap
 
@@ -63,8 +64,9 @@ pay_x402("myagent.null")   →  resolve the record → read its x402 endpoint �
 `x402-pay` accepts a `.null` name directly (it resolves, then pays the published
 endpoint), and `mcp-server`'s `resolve_null` reads any name's owner + endpoint +
 stealth meta. Recipient-private pay-by-name (payment to a one-time stealth address)
-was demonstrated end to end on devnet; registering new names and publishing
-endpoints (`UPDATE_ENDPOINT`) resume with the relaunch.
+is implemented in code with tests; a devnet redeploy under a fresh key is pending.
+Registering new names and publishing endpoints (`UPDATE_ENDPOINT`) resume with the
+relaunch.
 
 ## Notes
 

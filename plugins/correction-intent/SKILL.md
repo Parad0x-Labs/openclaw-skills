@@ -39,7 +39,8 @@ system_injection = inject_active_state(state)
 ```python
 from correction_intent import correction_chain_receipt
 receipt = correction_chain_receipt(state, session_id)
-# receipt["chain_root"] anchors to Solana via receipt_anchor
+# receipt["chain_root"] is the anchorable 32-byte root (on-chain anchoring via
+# receipt_anchor is unavailable until the redeploy under a fresh key)
 ```
 
 Part of the Parad0x Labs stack: github.com/Parad0x-Labs/openclaw-skills/tree/main/plugins/correction-intent
