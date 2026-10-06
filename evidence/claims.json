@@ -12,7 +12,7 @@
       "id": "x402-pay.capped-payments",
       "plain_claim": "x402-pay pays x402 endpoints in USDC through the operator's own signer and refuses a seller amount above maxAmountUsdc before building a transaction.",
       "component": "skills/x402-pay",
-      "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+      "source_sha": "bcd45a4b493be99d132e5b2feeb6e68417210da7",
       "source_paths": [
         "skills/x402-pay/src/client.ts",
         "skills/x402-pay/src/index.ts",
@@ -25,7 +25,7 @@
         "package_json": "skills/x402-pay/package.json",
         "git_version": "2.0.1",
         "npm_latest": "2.0.0",
-        "npm_checked_at": "2026-10-06T08:23:41Z"
+        "npm_checked_at": "2026-10-06T09:32:24Z"
       },
       "publication_status": "published-older-version",
       "network": null,
@@ -44,7 +44,7 @@
       "test_run": {
         "result": "pass",
         "date": "2026-10-06",
-        "environment": "node:22 container, network off, sources from git archive of c103eac",
+        "environment": "node:22 container, network off after npm ci --ignore-scripts, sources checked out from git at bcd45a4",
         "command": "npm test (skills/x402-pay)",
         "note": "13 of 13 passed"
       },
@@ -54,10 +54,11 @@
       "demonstrated_properties": [
         "mainnet payments refused unless allowMainnet=true",
         "seller amount above maxAmountUsdc refused before a transaction is built",
-        "own payment confirmed at finalized commitment"
+        "own payment confirmed at finalized commitment",
+        "README and SKILL.md state that the 5 bps fee leg is added on top of the capped seller amount"
       ],
       "not_demonstrated": [
-        "that the cap includes the protocol fee: the 5 bps fee leg is added on top of the capped seller amount",
+        "a cap on the total debit: the fee leg can take it up to 0.05% above maxAmountUsdc",
         "a mainnet payment in this review pass"
       ],
       "operational_limitations": [],
@@ -125,7 +126,7 @@
       "id": "payment-session.metered-billing",
       "plain_claim": "payment-session tracks metered and subscription charges for an agent session and suggests when to pay.",
       "component": "plugins/payment-session",
-      "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+      "source_sha": "bcd45a4b493be99d132e5b2feeb6e68417210da7",
       "source_paths": [
         "plugins/payment-session/src/session.ts",
         "plugins/payment-session/src/tools.ts"
@@ -134,11 +135,11 @@
       "package_version": {
         "name": "@parad0x_labs/openclaw-payment-session",
         "package_json": "plugins/payment-session/package.json",
-        "git_version": "0.1.0",
+        "git_version": "0.1.1",
         "npm_latest": "0.1.0",
-        "npm_checked_at": "2026-10-06T08:23:41Z"
+        "npm_checked_at": "2026-10-06T09:32:24Z"
       },
-      "publication_status": "published",
+      "publication_status": "published-older-version",
       "network": null,
       "program_id": null,
       "deployed_build_hash": null,
@@ -152,22 +153,26 @@
       ],
       "test_command": "cd plugins/payment-session && npm ci --ignore-scripts && npm test",
       "test_run": {
-        "result": "not-run",
-        "date": null,
-        "environment": "node:22 container",
-        "note": "Container ran out of memory during npm ci in this pass."
+        "result": "pass",
+        "date": "2026-10-06",
+        "environment": "node:22 container, network off after npm ci --ignore-scripts, sources checked out from git at bcd45a4",
+        "command": "npm test (plugins/payment-session)",
+        "note": "10 of 10 passed"
       },
       "mocks_or_skips": [],
       "demonstrated_properties": [
         "in-memory per-session accounting",
-        "check_settlement_due never suggests more than the remaining budget"
+        "check_settlement_due never suggests more than the remaining budget",
+        "record_settled refuses an amount above the remaining budget"
       ],
       "not_demonstrated": [
-        "enforcement of the session cap on pay_x402",
+        "enforcement of the session budget on pay_x402: pay_x402 pays the seller's quote, bounded only by x402-pay's maxAmountUsdc (README, SKILL.md and plugin description say so from 0.1.1)",
         "on-chain verification of settled amounts",
         "persistence across restarts"
       ],
-      "operational_limitations": [],
+      "operational_limitations": [
+        "0.1.1 (README and description corrections) is in Git, not on npm; npm latest is 0.1.0."
+      ],
       "supersedes": null
     },
     {
@@ -221,7 +226,7 @@
       "id": "agent-passport.identity-lookup",
       "plain_claim": "agent-passport resolves an agent's .null name and ETH to Solana wallet binding against the on-chain owner record.",
       "component": "plugins/agent-passport",
-      "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+      "source_sha": "bcd45a4b493be99d132e5b2feeb6e68417210da7",
       "source_paths": [
         "plugins/agent-passport/src/passport.ts"
       ],
@@ -231,7 +236,7 @@
         "package_json": "plugins/agent-passport/package.json",
         "git_version": "0.2.0",
         "npm_latest": "0.1.0",
-        "npm_checked_at": "2026-10-06T08:23:41Z"
+        "npm_checked_at": "2026-10-06T09:32:24Z"
       },
       "publication_status": "published-older-version",
       "network": null,
@@ -241,25 +246,27 @@
       "authority_assumptions": [],
       "evidence_checked_at": "2026-10-06",
       "proof_files": [
-        "plugins/agent-passport/package.json"
+        "plugins/agent-passport/test/passport.test.mjs"
       ],
       "test_command": "cd plugins/agent-passport && npm install --ignore-scripts && npm test",
       "test_run": {
-        "result": "not-run",
-        "date": null,
-        "environment": "node:22 container",
-        "note": "Container ran out of memory during install in this pass."
+        "result": "pass",
+        "date": "2026-10-06",
+        "environment": "node:22 container, network off after npm ci --ignore-scripts, sources checked out from git at bcd45a4",
+        "command": "npm test (plugins/agent-passport)",
+        "note": "14 of 14 passed (PDA derivation, tool factory, program list, retired status, no compromised or closed program ids)"
       },
       "mocks_or_skips": [],
       "demonstrated_properties": [
-        "read-only lookups"
+        "read-only lookups",
+        "PROGRAMS lists only dark_secp256k1_auth; the closed mainnet receipt_anchor id and the RECEIPT_ANCHOR export are removed (Git 0.2.0)"
       ],
       "not_demonstrated": [
         "writes: .null write builders are unavailable until the registrar relaunch",
         "a live lookup in this review pass"
       ],
       "operational_limitations": [
-        "src/passport.ts still exports RECEIPT_ANCHOR = the retired mainnet pilot program 6HSRGivd...; it should be removed or marked retired."
+        "Git 0.2.0 is not on npm; npm latest 0.1.0 still exports the closed receipt_anchor id."
       ],
       "supersedes": null
     },
@@ -267,7 +274,7 @@
       "id": "liquefy.vault-compression",
       "plain_claim": "Liquefy packs agent run folders into vaults with format-aware engines and keeps an archive only after a byte-exact round-trip check.",
       "component": "Liquefy vault appliance (Python)",
-      "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+      "source_sha": "bcd45a4b493be99d132e5b2feeb6e68417210da7",
       "source_paths": [
         "api/orchestrator/orchestrator.py",
         "tools/tracevault_pack.py"
@@ -292,11 +299,11 @@
       "mocks_or_skips": [],
       "demonstrated_properties": [
         "round-trip verification with fallback to plain zstd (MRTV)",
-        "committed CI benchmark (benchmarks/latest_ci.csv, 2026-02-26): 114.7x versus zstd -19 45.3x on a repetitive JSON fixture; 5.86x versus 5.86x on VPC flow logs",
-        "near-parity on dense prose (1.02x versus 1.06x for zstd -19, per docs/VAULT_APPLIANCE.md)"
+        "committed CI benchmark (benchmarks/latest_ci.csv, 2026-02-26): 114.7x versus zstd -19 45.3x on a repetitive JSON fixture; 5.86x (default) and 6.95x (ratio profile) versus 5.86x on VPC flow logs; docs/VAULT_APPLIANCE.md and docs/SKILLS_CATALOG.md now cite these numbers"
       ],
       "not_demonstrated": [
-        "the 103.9x versus 63.8x README figure: no committed result file, and the documented fixture set (19 files, 1.9 MB) differs from the reproduce command's directory",
+        "the earlier 103.9x versus 63.8x figure (no committed result file; no longer cited)",
+        "near-parity on dense prose (1.02x versus 1.06x): from the same earlier pass, no committed result file",
         "ratios on customer data"
       ],
       "operational_limitations": [
@@ -345,7 +352,7 @@
       "id": "liquefy.vault-anchor",
       "plain_claim": "A vault fingerprint can be posted to Solana as an SPL Memo so a third party can check that the vault existed.",
       "component": "tools/liquefy_vault_anchor.py",
-      "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+      "source_sha": "bcd45a4b493be99d132e5b2feeb6e68417210da7",
       "source_paths": [
         "tools/liquefy_vault_anchor.py"
       ],
@@ -367,10 +374,10 @@
       "test_run": null,
       "mocks_or_skips": [],
       "demonstrated_properties": [
-        "memo text LQFY|<16 hex>|<16 hex>|<key fingerprint>: 64-bit prefixes of the vault hash and chain tip"
+        "memo text LQFY|<16 hex>|<16 hex>|<key fingerprint>: a 55-byte memo with 64-bit prefixes of the vault hash and chain tip; the module docstring and docs/VAULT_TOOLS.md now say so"
       ],
       "not_demonstrated": [
-        "full 32-byte hashes on-chain (the module docstring says 80 bytes with 32-byte hashes; the code posts 16-hex-character prefixes)",
+        "full 32-byte hashes on-chain (only 64-bit prefixes are posted)",
         "an anchor transaction in this review pass"
       ],
       "operational_limitations": [
@@ -391,11 +398,11 @@
       "package_version": {
         "name": "@parad0x_labs/openclaw-context-capsule",
         "package_json": "skills/context-capsule/package.json",
-        "git_version": "1.7.0",
+        "git_version": "1.7.1",
         "npm_latest": "1.7.0",
-        "npm_checked_at": "2026-10-06T08:23:41Z"
+        "npm_checked_at": "2026-10-06T09:32:24Z"
       },
-      "publication_status": "published",
+      "publication_status": "published-older-version",
       "network": null,
       "program_id": null,
       "deployed_build_hash": null,
@@ -416,7 +423,9 @@
         "retrieval of omitted details (the skill has none)",
         "end-to-end task token or cost savings"
       ],
-      "operational_limitations": [],
+      "operational_limitations": [
+        "1.7.1 (release commit 4acc8e4, shipped-file wording only) is in Git, not on npm; npm latest is 1.7.0."
+      ],
       "supersedes": null
     }
   ]
