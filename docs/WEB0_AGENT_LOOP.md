@@ -9,7 +9,7 @@ key.
 |---|---|---|
 | 1. Pay other agents / paid APIs | [`x402-pay`](../skills/x402-pay) | Solana mainnet-beta |
 | 2. Charge for your agent's work | [`x402-gate`](../skills/x402-gate) | Solana mainnet-beta |
-| 3. Keep verifiable receipts | x402-gate + x402-pay receipt hashes | local (on-chain anchoring after the redeploy) |
+| 3. Keep verifiable receipts | x402-gate + x402-pay receipt hashes | local; a devnet `receipt_anchor` is available for explicit anchoring |
 | 4. Keep long sessions cheap | [`context-capsule`](../skills/context-capsule) | npm |
 
 ---
@@ -35,8 +35,10 @@ identical receipt hashes, so the loop reconciles with no shared state.
 
 The paying and charging sides derive identical 32-byte receipt hashes for every
 sale, so each party holds a matching record with no shared state. Anchoring those
-hashes on-chain with `receipt_anchor` is unavailable until the redeploy under a
-fresh key; `anchor_receipt` in `mcp-server` returns that refusal and sends nothing.
+hashes on-chain is not wired into these skills: `anchor_receipt` in `mcp-server`
+returns a refusal and sends nothing. A devnet `receipt_anchor` is available at
+`HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs` (2026-10-06, fresh key); pass it explicitly to a client
+that anchors, such as dna-x402 `receipt-dag`.
 The mainnet deployment (`6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN`) anchored
 receipts June–July 2026 and is retired; those historical anchors remain readable.
 
@@ -66,7 +68,7 @@ pay_x402("myagent.null")   →  resolve the record → read its x402 endpoint �
 `x402-pay` accepts a `.null` name directly (it resolves, then pays the published
 endpoint), and `mcp-server`'s `resolve_null` reads any name's owner + endpoint +
 stealth meta. Recipient-private pay-by-name (payment to a one-time stealth address)
-is implemented in code with tests; a devnet redeploy under a fresh key is pending.
+runs on devnet under a fresh key since 2026-10-06 (`null_registrar` `3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ`).
 Registering new names and publishing endpoints (`UPDATE_ENDPOINT`) resume with the
 relaunch.
 

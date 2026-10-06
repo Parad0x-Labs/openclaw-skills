@@ -69,7 +69,7 @@ deployed. **Not established** lists what a reader should not infer.
   signed and is not anchored by this skill.
 - No skill nets obligations or settles them on-chain. `payment-session` is bookkeeping: it trusts the
   amounts reported to it, caps only what it suggests and records, and does not limit what `pay_x402` pays.
-- Receipt anchoring through `receipt_anchor` is unavailable in these skills until a deployment is configured.
+- Receipt anchoring through `receipt_anchor` is not wired into these skills: none names a default program and `mcp-server`, `web0-onboard` and `agent-passport` refuse to anchor. A devnet `receipt_anchor` is available at `HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs` (2026-10-06, fresh key) for clients that take the program ID explicitly.
 
 ## Reproduce
 

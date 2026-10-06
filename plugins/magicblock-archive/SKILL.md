@@ -1,6 +1,6 @@
 ---
 name: magicblock-archive
-description: Archive MagicBlock Ephemeral Rollup session transaction logs — compresses ER sessions into Liquefy vaults and computes a per-session commitment for the receipt_anchor accumulator (on-chain anchoring is unavailable until the redeploy under a fresh key). Fills the MagicBlock auditability gap. x402 session playback pricing included.
+description: Archive MagicBlock Ephemeral Rollup session transaction logs — compresses ER sessions into Liquefy vaults and computes a per-session commitment for the receipt_anchor accumulator (this skill does not anchor on-chain; a devnet receipt_anchor is available for explicit use). Fills the MagicBlock auditability gap. x402 session playback pricing included.
 license: MIT
 metadata:
   author: Parad0x-Labs
@@ -13,10 +13,11 @@ computes a per-session 32-byte commitment (`session_commitment`) for the receipt
 accumulator. Fills the MagicBlock auditability gap by keeping a verifiable,
 tamper-evident record of every ER session.
 
-Receipt anchoring is unavailable until the redeploy under a fresh key:
-`archive_session(anchor=True)` raises `ReceiptAnchorUnavailableError` before the
-session is fetched or anything is written. Archive with `anchor=False`; the result
-carries the `session_commitment` hex, ready to anchor after the redeploy. The mainnet
+This skill does not anchor: `archive_session(anchor=True)` raises
+`ReceiptAnchorUnavailableError` before the session is fetched or anything is written.
+Archive with `anchor=False`; the result carries the `session_commitment` hex. A devnet
+`receipt_anchor` is available at `HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs` (2026-10-06, fresh
+key); pass it explicitly to a client that anchors. The mainnet
 receipt_anchor (`6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN`) was retired 2026-07-14;
 its historical anchors remain readable.
 

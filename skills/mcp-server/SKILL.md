@@ -1,6 +1,6 @@
 ---
 name: parad0x-mcp-server
-description: MCP server exposing the Parad0x Labs stack — x402 payment quotes, receipt hashing (on-chain anchoring returns after the receipt_anchor redeploy), read-only .null resolution and Dark Passport lookup, outcome receipts, receipt compression, and program status discovery. Runs over stdio, works with Claude Desktop and any MCP client.
+description: MCP server exposing the Parad0x Labs stack — x402 payment quotes, receipt hashing (no on-chain anchoring in this server; a devnet receipt_anchor is available for explicit use), read-only .null resolution and Dark Passport lookup, outcome receipts, receipt compression, and program status discovery. Runs over stdio, works with Claude Desktop and any MCP client.
 license: MIT
 metadata:
   author: Parad0x-Labs
@@ -14,7 +14,7 @@ Cursor, Windsurf, and any MCP-compatible agent runtime.
 ## When to use
 
 - Your agent needs to quote, pay, or verify an x402-gated API call.
-- You want to compute receipt hashes locally (on-chain anchoring returns after the redeploy).
+- You want to compute receipt hashes locally (this server does not anchor on-chain).
 - You need to resolve a legacy `.null` name or read an existing Dark Passport binding.
 - You want to compress a batch of receipts or check program addresses and status.
 
@@ -32,9 +32,10 @@ Cursor, Windsurf, and any MCP-compatible agent runtime.
 
 ## Deployment status
 
-- **Receipt anchoring is unavailable until the redeploy under a fresh key.**
-  `anchor_receipt` and `private_compute` anchoring refuse with a clear error and send
-  nothing; hashes are still computed locally. The mainnet `receipt_anchor`
+- **This server does not anchor receipts.** `anchor_receipt` and `private_compute`
+  anchoring refuse with a clear error and send nothing; hashes are still computed
+  locally. A devnet `receipt_anchor` is available at `HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs`
+  (2026-10-06, fresh key); pass it explicitly to a client that anchors. The mainnet `receipt_anchor`
   (`6HSRGivd…`) was retired 2026-07-14; historical mainnet anchors remain readable.
 - **`.null` resolution is read-only.** The legacy mainnet registrar (`NXgQhepF…`) was
   retired 2026-08-29 — records resolve, registration/updates/transfers are frozen.

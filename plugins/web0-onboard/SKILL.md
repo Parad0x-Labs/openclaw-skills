@@ -23,9 +23,10 @@ validated setup your agent can act on immediately.
   prices) so you start charging USDC on Solana right away. Funds settle to **your**
   wallet; the plugin never holds a key.
 - **Receipts** — x402-gate and x402-pay derive matching receipt hashes for every
-  sale. Receipt anchoring is unavailable until the redeploy under a fresh key, so
-  the block names no anchor program; it notes that the mainnet anchor program
-  (`6HSRGivd…`) was retired 2026-07-14.
+  sale. The block names no anchor program and the plugin does not anchor; it notes
+  that the mainnet anchor program (`6HSRGivd…`) was retired 2026-07-14. A devnet
+  `receipt_anchor` is available at `HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs`; pass it explicitly
+  to a client that anchors.
 - **Name status** — if you pass a `name`, it is validated and returned with its
   status: the mainnet registrar is retired, existing names resolve read-only, and
   registration is frozen until the relaunch. No name is needed to sell.
@@ -70,13 +71,15 @@ buyer:  pay_x402(<your x402-gate URL>)  → quote → pay USDC → receipt hash
 ## Status
 
 - x402 USDC payment (`x402-gate` / `x402-pay` SPL transfers): mainnet (opt-in) and devnet.
-- Receipt anchoring: unavailable until the redeploy under a fresh key. The mainnet
-  program `6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN` was retired 2026-07-14.
+- Receipt anchoring: not done by this plugin. A devnet `receipt_anchor` is available at
+  `HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs` (2026-10-06, fresh key); pass it explicitly to a client
+  that anchors. The mainnet program `6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN` was
+  retired 2026-07-14.
 - `.null` names: the mainnet registrar `NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np`
   was retired 2026-08-29. Existing names resolve read-only; writes are frozen until
   the registrar relaunch. Recipient-private pay-by-name to a one-time stealth
-  address is implemented in code with tests; a devnet redeploy under a fresh key is
-  pending.
+  address runs on devnet under a fresh key since 2026-10-06 (`null_registrar`
+  `3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ`).
 
 ## Config (all optional defaults)
 

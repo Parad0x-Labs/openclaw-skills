@@ -101,8 +101,8 @@ Companion: [`@parad0x_labs/null-mcp`](https://www.npmjs.com/package/@parad0x_lab
 | `mcp-server` | **Usable today** | Quote, receipt hashing, identity lookup, `.null` resolution, stack status |
 | `agent-passport`, `web0-onboard` | **Usable today** | Identity lookup and storefront config. `.null` write builders are unavailable until the registrar relaunch |
 | `.null` names (legacy mainnet registrar) | **Retired (mainnet 2026, records readable)** | Names registered June to August 2026 resolve read-only: owner, content pointer, x402 endpoint. Registration, updates and transfers are frozen |
-| Receipt anchoring (`receipt_anchor`) | **Built · redeploy pending** | Unavailable until the redeploy under a fresh key. Receipt hashes are still computed and kept locally |
-| Pay-by-name to a one-time stealth address | **Built · redeploy pending** | Implemented in code with tests; devnet redeploy under a fresh key pending |
+| Receipt anchoring (`receipt_anchor`) | **Devnet (2026-10-06)** | A devnet `receipt_anchor` runs under a fresh key at `HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs` ([evidence](https://github.com/Parad0x-Labs/dna-x402/blob/main/evidence/devnet-2026-10-06/README.md)); pass it explicitly to a client that anchors. The skills here have no default anchor program and do not submit anchors: receipt hashes are computed and kept locally |
+| Pay-by-name to a one-time stealth address | **Devnet (2026-10-06)** | Runs end to end on devnet against `null_registrar` `3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ` under a fresh key ([evidence](https://github.com/Parad0x-Labs/dna-x402/blob/main/evidence/devnet-2026-10-06/README.md)); the skills here do not build pay-by-name transactions |
 | Dark NULL proof-verified withdrawals | **Devnet** | Devnet prototype: amount, receiver token account, mint and note commitment are public, so a withdrawal is linkable to its deposit; unlinkable withdrawals are planned protocol work; no mainnet deployment |
 | Vault appliance (Liquefy) | **Usable today** | Python, runs locally. See below |
 

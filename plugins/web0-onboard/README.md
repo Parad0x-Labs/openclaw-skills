@@ -30,7 +30,7 @@ Returns a consolidated, validated setup:
 |---|---|
 | `identity` | your on-chain identity PDA + whether it's bound |
 | `storefront` | drop-in `x402-gate` config (recipient = your wallet, per-service prices) |
-| `receipts` | receipt-hash guidance; anchoring is unavailable until the redeploy under a fresh key, so no anchor program is named (the mainnet anchor `6HSRGivd…` was retired 2026-07-14) |
+| `receipts` | receipt-hash guidance; the plugin names no anchor program and does not anchor (the mainnet anchor `6HSRGivd…` was retired 2026-07-14). A devnet `receipt_anchor` is available at `HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs`; pass it explicitly to a client that anchors |
 | `name` | your `.null` label, validated, plus its status: registration frozen, existing names resolve read-only |
 | `next_steps` / `summary` | an ordered, human-readable setup checklist |
 
@@ -54,8 +54,8 @@ holds a key. Each tool takes `dryRun: true` to preview without signing.
 | `set_null_endpoint({ name, endpoint })` | publish your x402 endpoint on the name (`UPDATE_ENDPOINT`) |
 | `set_null_stealth_meta({ name, stealth_meta_hex })` | publish a stealth address for recipient-private pay-by-name |
 
-Recipient-private pay-by-name to a one-time stealth address is implemented in code
-with tests; a devnet redeploy under a fresh key is pending.
+Recipient-private pay-by-name to a one-time stealth address runs on devnet under a fresh
+key since 2026-10-06 (`null_registrar` `3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ`).
 
 ## How it fits
 
@@ -66,7 +66,8 @@ buyer:  pay_x402(<your x402-gate URL>)  → quote → pay USDC → receipt hash
 ```
 
 x402 USDC payment (`x402-gate` / `x402-pay` SPL transfers) runs on mainnet (opt-in)
-and devnet. Receipt anchoring is unavailable until the redeploy under a fresh key.
+and devnet. This plugin does not anchor receipts; a devnet `receipt_anchor` is available at
+`HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs` (2026-10-06, fresh key) for clients that take the program ID explicitly.
 
 ## Trust model
 
