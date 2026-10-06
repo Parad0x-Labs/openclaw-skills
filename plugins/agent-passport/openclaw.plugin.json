@@ -7,7 +7,6 @@
   "enabledByDefault": false,
   "configSchema": {
     "type": "object",
-    "additionalProperties": false,
     "properties": {
       "solanaWallet": {
         "type": "string",
@@ -25,6 +24,16 @@
         "type": "string",
         "description": "Solana RPC URL override. Defaults to solana-rpc.publicnode.com."
       }
-    }
+    },
+    "additionalProperties": false
+  },
+  "name": "Agent Passport",
+  "description": "On-chain identity for OpenClaw agents — .null name, ETH↔Solana binding, verifiable agent identity without touching private keys.",
+  "version": "0.2.1",
+  "contracts": {
+    "tools": [
+      "get_agent_passport",
+      "verify_agent_identity"
+    ]
   }
 }

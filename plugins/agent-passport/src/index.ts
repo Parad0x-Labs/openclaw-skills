@@ -19,14 +19,30 @@ let memo: ReturnType<typeof buildPassportTools> | null = null;
 const runtimeTools = (config: unknown) =>
   (memo ??= buildPassportTools(readConfig(config as Record<string, unknown> | undefined)));
 
+/** Plugin config schema. `openclaw plugins build` generates the manifest
+ *  configSchema (openclaw.plugin.json) from this object, and the host validates
+ *  `plugins.entries.agent-passport.config` against that manifest before the plugin loads. */
 const ConfigSchema = Type.Object(
   {
-    solanaWallet: Type.Optional(Type.String({ description: "Agent's Solana wallet (base58)." })),
-    ethAddress: Type.Optional(Type.String({ description: "Agent's ETH address (hex), optional." })),
-    nullName: Type.Optional(Type.String({ description: "Agent's .null name." })),
-    rpcUrl: Type.Optional(Type.String({ description: "RPC override; defaults to publicnode." })),
+    solanaWallet: Type.Optional(
+      Type.String({
+        description:
+          "Agent's Solana wallet address (base58 public key). Used to look up on-chain identity records.",
+      }),
+    ),
+    ethAddress: Type.Optional(
+      Type.String({
+        description: "Agent's ETH address (hex, optional). Used to look up secp256k1 identity binding.",
+      }),
+    ),
+    nullName: Type.Optional(
+      Type.String({ description: "Agent's .null name (e.g. myagent.null). Used for identity display and routing." }),
+    ),
+    rpcUrl: Type.Optional(
+      Type.String({ description: "Solana RPC URL override. Defaults to solana-rpc.publicnode.com." }),
+    ),
   },
-  { additionalProperties: true },
+  { additionalProperties: false },
 );
 
 const PARAMS: Record<string, TSchema> = {
