@@ -2,8 +2,19 @@ import { verifyReputationProof, repChallenge } from "../src/rep.ts";
 import * as snarkjs from "snarkjs";
 import { poseidon2, poseidon3, poseidon5 } from "poseidon-lite";
 import { randomBytes } from "node:crypto";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ART = "/Users/sauliuskruopis/Desktop/dna-x402-redeploy.BACKUP-20260621-presync/sandbox/track-artifacts";
+// Proving artifacts (track_record.wasm + track_record_final.zkey) are not
+// committed. Point X402_CIRCUIT_ARTIFACTS at the directory holding them, or place
+// them in test/fixtures/track-artifacts. Without them this test is skipped.
+const ART = process.env.X402_CIRCUIT_ARTIFACTS
+  ?? join(dirname(fileURLToPath(import.meta.url)), "fixtures", "track-artifacts");
+if (!existsSync(join(ART, "track_record.wasm")) || !existsSync(join(ART, "track_record_final.zkey"))) {
+  console.log(`# SKIP rep.test.mts: circuit artifacts not found in ${ART} (set X402_CIRCUIT_ARTIFACTS to run it)`);
+  process.exit(0);
+}
 const K = 4, DEPTH = 10, DOMAIN_REP = 7n;
 const P = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 const randFr = () => BigInt("0x" + randomBytes(31).toString("hex")) % P;

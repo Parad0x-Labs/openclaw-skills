@@ -6,8 +6,12 @@
  * accepts it under policy + rejects every tampered / transplanted / replayed variant.
  *
  * Run: node --experimental-strip-types test/prover.test.mts
- * Needs the proving artifacts (wasm + zkey) from the track-artifacts backup dir.
+ * Needs the proving artifacts (wasm + zkey): set X402_CIRCUIT_ARTIFACTS to their
+ * directory or place them in test/fixtures/track-artifacts; skipped otherwise.
  */
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   proveReputation,
   proveReputationFromLeaves,
@@ -22,7 +26,15 @@ import {
 // The gate side — the verifier the proof must satisfy.
 import { verifyReputationProof } from "../../x402-gate/src/rep.ts";
 
-const ART = "/Users/sauliuskruopis/Desktop/dna-x402-redeploy.BACKUP-20260621-presync/sandbox/track-artifacts";
+// Proving artifacts (track_record.wasm + track_record_final.zkey) are not
+// committed. Point X402_CIRCUIT_ARTIFACTS at the directory holding them, or place
+// them in test/fixtures/track-artifacts. Without them this test is skipped.
+const ART = process.env.X402_CIRCUIT_ARTIFACTS
+  ?? join(dirname(fileURLToPath(import.meta.url)), "fixtures", "track-artifacts");
+if (!existsSync(join(ART, "track_record.wasm")) || !existsSync(join(ART, "track_record_final.zkey"))) {
+  console.log(`# SKIP prover.test.mts: circuit artifacts not found in ${ART} (set X402_CIRCUIT_ARTIFACTS to run it)`);
+  process.exit(0);
+}
 const WASM = `${ART}/track_record.wasm`;
 const ZKEY = `${ART}/track_record_final.zkey`;
 
