@@ -38,12 +38,10 @@ Returns this agent's on-chain identity record:
   "eth_binding_registered": true,
   "network": "solana-mainnet",
   "programs": {
-    "dark_secp256k1_auth": "AqwBbV13AoczhoELwP8oxT3nDqB6MsLWXauNzHkssZ9B",
-    "receipt_anchor": "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN"
+    "dark_secp256k1_auth": "AqwBbV13AoczhoELwP8oxT3nDqB6MsLWXauNzHkssZ9B"
   },
   "program_status": {
-    "dark_secp256k1_auth": "retired (mainnet) — existing ETH↔Solana bindings readable; ...",
-    "receipt_anchor": "retired 2026-07-14 (mainnet) — historical anchors readable; ..."
+    "dark_secp256k1_auth": "retired (mainnet) — existing ETH↔Solana bindings readable; ..."
   }
 }
 ```
@@ -76,7 +74,8 @@ The ETH↔Solana binding program (`dark_secp256k1_auth`) is a retired mainnet pr
 accounts stay readable, so both tools verify **existing** bindings, but nothing can be
 invoked and no new bindings can be created. This plugin has no write path. Every result
 carries `program_status`. The WebAuthn vault lookup was removed in 0.2.0 because that
-program is attacker-controlled.
+program is attacker-controlled, and 0.2.0 no longer lists the closed mainnet
+`receipt_anchor` program (the `RECEIPT_ANCHOR` export is removed).
 
 `nullName` is surfaced from config as-is. To resolve a legacy `.null` name (read-only —
 the mainnet registrar was retired 2026-08-29, records stay readable), use the

@@ -25,20 +25,18 @@ import { Connection, PublicKey } from "@solana/web3.js";
 // vault here — those programs are attacker-controlled. The WebAuthn vault
 // lookup was removed in 0.2.0 for that reason.
 
+// The retired mainnet receipt_anchor program is closed and no longer listed: this
+// plugin never read it, and no receipt_anchor deployment is configured.
 export const DARK_SECP256K1_AUTH = "AqwBbV13AoczhoELwP8oxT3nDqB6MsLWXauNzHkssZ9B";
-export const RECEIPT_ANCHOR = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN";
 
 export const PROGRAMS = {
   dark_secp256k1_auth: DARK_SECP256K1_AUTH,
-  receipt_anchor: RECEIPT_ANCHOR,
 } as const;
 
 /** Current status of each program above — returned alongside every lookup. */
 export const PROGRAM_STATUS = {
   dark_secp256k1_auth:
     "retired (mainnet) — existing ETH↔Solana bindings readable; no new bindings can be created",
-  receipt_anchor:
-    "retired 2026-07-14 (mainnet) — historical anchors readable; receipt anchoring is unavailable until the redeploy under a fresh key",
 } as const satisfies Record<keyof typeof PROGRAMS, string>;
 
 // Public RPC — never api.mainnet-beta.solana.com (403s with Origin header)

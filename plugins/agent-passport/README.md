@@ -48,7 +48,8 @@ The ETH↔Solana binding program (`dark_secp256k1_auth`) is a retired mainnet pr
 existing bindings stay readable and both tools verify them, but no new bindings can be
 created. Every result carries `program_status`. Version 0.2.0 removes the WebAuthn
 vault lookup (`webauthn_vault_registered`, `webauthn_vault_pda`) because that program
-is attacker-controlled.
+is attacker-controlled, and drops the closed mainnet `receipt_anchor` program from
+`programs` (the `RECEIPT_ANCHOR` export is removed).
 `nullName` is surfaced from config as-is; legacy `.null` names resolve read-only via
 the mcp-server `resolve_null` tool or x402-pay pay-by-name.
 

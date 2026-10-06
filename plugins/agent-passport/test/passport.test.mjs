@@ -12,7 +12,6 @@ import { createHash } from "node:crypto";
 
 import {
   DARK_SECP256K1_AUTH,
-  RECEIPT_ANCHOR,
   DEFAULT_RPC,
   PROGRAMS,
   PROGRAM_STATUS,
@@ -41,7 +40,7 @@ const SAMPLE_WALLET = "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"; // a valid
 // ── program IDs / RPC ─────────────────────────────────────────────────────────
 
 test("no seized pre-incident program ID is referenced", () => {
-  for (const id of [DARK_SECP256K1_AUTH, RECEIPT_ANCHOR, ...Object.values(PROGRAMS)]) {
+  for (const id of [DARK_SECP256K1_AUTH, ...Object.values(PROGRAMS)]) {
     assert.ok(!COMPROMISED_SHA256.has(sha256(id)), `${id} is a compromised ID and must not be used`);
   }
   for (const v of Object.values(PROGRAM_STATUS)) {
@@ -56,10 +55,16 @@ test("default RPC is the approved public node (never api.mainnet-beta)", () => {
   assert.doesNotMatch(DEFAULT_RPC, /api\.mainnet-beta\.solana\.com/);
 });
 
-test("PROGRAMS maps exactly the two legacy mainnet program IDs (no WebAuthn vault)", () => {
-  assert.deepEqual(Object.keys(PROGRAMS).sort(), ["dark_secp256k1_auth", "receipt_anchor"]);
+test("PROGRAMS maps only the legacy ETH-binding program (no WebAuthn vault, no closed receipt_anchor)", async () => {
+  assert.deepEqual(Object.keys(PROGRAMS), ["dark_secp256k1_auth"]);
   assert.equal(PROGRAMS.dark_secp256k1_auth, DARK_SECP256K1_AUTH);
-  assert.equal(PROGRAMS.receipt_anchor, RECEIPT_ANCHOR);
+  const mod = await import("../dist/passport.js");
+  assert.equal("RECEIPT_ANCHOR" in mod, false, "RECEIPT_ANCHOR export removed");
+  // SHA-256 of the closed mainnet receipt_anchor id: no shipped source may name it.
+  const closedAnchorSha = "8170f04125228f9437170d731d01978ae865721cda0f2c644fa677ec6c7062cc";
+  for (const word of JSON.stringify({ PROGRAMS, PROGRAM_STATUS }).match(/[1-9A-HJ-NP-Za-km-z]{32,44}/g) ?? []) {
+    assert.notEqual(sha256(word), closedAnchorSha);
+  }
 });
 
 // ── PDA derivation ────────────────────────────────────────────────────────────
@@ -155,9 +160,6 @@ test("PROGRAM_STATUS marks every listed program retired, keyed like PROGRAMS", (
     assert.match(v, /^retired/, `${k} must be reported retired`);
     assert.match(v, /readable/, `${k} must say its accounts stay readable`);
   }
-  assert.match(PROGRAM_STATUS.receipt_anchor, /2026-07-14/);
-  assert.match(PROGRAM_STATUS.receipt_anchor, /receipt anchoring is unavailable until the redeploy under a fresh key/);
-  assert.doesNotMatch(PROGRAM_STATUS.receipt_anchor, /devnet/i);
 });
 
 test("tool descriptions state read-only access to retired programs (no live claims)", () => {
