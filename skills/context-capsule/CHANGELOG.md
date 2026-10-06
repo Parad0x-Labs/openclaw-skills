@@ -21,8 +21,8 @@ Docs, comments and one internal rename; behaviour is unchanged from 1.7.0.
   regeneration command in `demo/README.md` now also writes the generated-file
   header. (The demo is repo-only; it is not in the npm package.)
 - **package-lock.json** root version now matches package.json (it said 1.6.0).
-- **Wording.** Internal vault-pattern field renamed `placeholder` -> `replacement`
-  (not exported; no behaviour change); emoji removed from SKILL.md.
+- **Wording.** Internal vault-pattern field renamed to `replacement` (not
+  exported; no behaviour change); emoji removed from SKILL.md.
 
 ## 1.7.0
 
