@@ -2,13 +2,17 @@
 
 This package is a Node.js/OpenClaw plugin wrapper for the Liquefy CLI. It exposes
 safe OpenClaw tools (`liquefy_scan`, `liquefy_pack_apply`) and shells out to the
-Liquefy CLI JSON contracts.
+Liquefy CLI JSON contracts. It is defined with the OpenClaw SDK's `defineToolPlugin`
+(TypeBox parameters + `execute`) and needs OpenClaw >= 2026.6.1.
 
-Status:
-- `liquefy_scan` (required, read-only): implemented
-- `liquefy_pack_apply` (optional / allowlist): implemented
-- JSON contract integration (`liquefy openclaw --json`): implemented
-- ClawHub/OpenClaw skill pack scaffold: included under `./skills/`
+- `liquefy_scan` (read-only, `--dry-run`): the safe default
+- `liquefy_pack_apply` (writes): registered as optional, so it must be allowlisted
+- `/liquefy_status` command: plugin version, Liquefy CLI compatibility and defaults
+- JSON contract integration (`liquefy openclaw --json`)
+- ClawHub/OpenClaw skill pack: under `./skills/`
+
+Both tools take `out` (vault output directory); when omitted they use `vaultOut` from
+the plugin config, and fail with `missing_out` if neither is set.
 
 ## What it does
 
@@ -32,9 +36,25 @@ git clone https://github.com/Parad0x-Labs/openclaw-skills.git && \
 When this package is published, prefer a pinned install:
 
 ```bash
-openclaw plugins install @parad0x-labs/liquefy-openclaw-plugin@0.1.0-alpha --pin
+openclaw plugins install @parad0x-labs/liquefy-openclaw-plugin@0.2.0 --pin
 openclaw plugins enable liquefy
 openclaw gateway restart
+```
+
+Plugin settings go under `config` in the plugin entry (OpenClaw validates them against
+`openclaw.plugin.json`):
+
+```jsonc
+{
+  "plugins": {
+    "entries": {
+      "liquefy": {
+        "enabled": true,
+        "config": { "vaultOut": "~/liquefy-vault", "profile": "default" }
+      }
+    }
+  }
+}
 ```
 
 ### 3) First safe run (scan only)
@@ -70,6 +90,7 @@ auditable and lets operators pin/verify their Liquefy install separately.
 
 ```bash
 cd plugins/openclaw-plugin
+npm ci --ignore-scripts   # installs typebox and the openclaw peer used by the entry test
 npm test
 ```
 

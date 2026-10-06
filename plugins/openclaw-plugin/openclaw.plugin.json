@@ -1,8 +1,8 @@
 {
   "id": "liquefy",
+  "minOpenClawVersion": "2026.6.1",
   "configSchema": {
     "type": "object",
-    "additionalProperties": false,
     "properties": {
       "binaryPath": {
         "type": "string",
@@ -17,9 +17,20 @@
         "description": "Default vault output directory (required for scan/apply if not supplied by tool input)."
       },
       "profile": {
-        "type": "string",
-        "enum": ["default", "ratio", "speed"],
-        "default": "default"
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "default"
+          },
+          {
+            "type": "string",
+            "const": "ratio"
+          },
+          {
+            "type": "string",
+            "const": "speed"
+          }
+        ]
       },
       "policyFile": {
         "type": "string",
@@ -27,19 +38,34 @@
       },
       "requireSecureByDefault": {
         "type": "boolean",
-        "default": false,
         "description": "If true, apply runs pass --secure and require LIQUEFY_SECRET."
       },
       "maxBytesPerRun": {
         "type": "integer",
-        "minimum": 0,
-        "default": 0
+        "minimum": 0
       },
       "listLimit": {
         "type": "integer",
-        "minimum": 1,
-        "default": 50
+        "minimum": 1
       }
+    },
+    "additionalProperties": false
+  },
+  "name": "Liquefy",
+  "description": "Liquefy CLI wrapper for OpenClaw: a read-only workspace scan (liquefy_scan) and an explicit, optional pack/apply (liquefy_pack_apply), with a vault-scan PII gate on inputs.",
+  "version": "0.2.0",
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "tools": [
+      "liquefy_scan",
+      "liquefy_pack_apply"
+    ]
+  },
+  "toolMetadata": {
+    "liquefy_pack_apply": {
+      "optional": true
     }
   }
 }

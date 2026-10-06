@@ -1,3 +1,21 @@
+/**
+ * Liquefy OpenClaw plugin.
+ *
+ * Defined with the OpenClaw SDK's `defineToolPlugin` (TypeBox `parameters` +
+ * `execute(params, config)`); the SDK registers the tools at plugin startup and
+ * hands each call the validated plugin config (`plugins.entries.liquefy.config`).
+ * The tools shell out to the Liquefy CLI JSON contract (./lib.js).
+ *
+ *   - liquefy_scan        read-only workspace scan (`--dry-run`), the safe default
+ *   - liquefy_pack_apply  explicit pack/apply; registered as optional (allowlist it)
+ *   - /liquefy_status     command: plugin version, CLI compatibility and defaults
+ *
+ * `openclaw plugins build --root . --entry dist/index.js` regenerates
+ * openclaw.plugin.json (contracts.tools, configSchema) from this file.
+ */
+import { Type } from "typebox";
+import { defineToolPlugin } from "openclaw/plugin-sdk/tool-plugin";
+
 import {
   MIN_LIQUEFY_OPENCLAW_VERSION,
   PLUGIN_VERSION,
@@ -5,124 +23,137 @@ import {
   runLiquefyOpenclaw,
 } from "./lib.js";
 
-function schemaBase(description) {
+const Profile = Type.Union([Type.Literal("default"), Type.Literal("ratio"), Type.Literal("speed")]);
+
+function baseParams() {
   return {
-    type: "object",
-    additionalProperties: false,
-    description,
-    properties: {
-      workspace: { type: "string" },
-      out: { type: "string" },
-      profile: { type: "string", enum: ["default", "ratio", "speed"] },
-      policy: { type: "string" },
-      maxBytesPerRun: { type: "integer", minimum: 0 },
-      listLimit: { type: "integer", minimum: 1 },
-      allow: { type: "array", items: { type: "string" } },
-      deny: { type: "array", items: { type: "string" } },
-      allowCategories: { type: "array", items: { type: "string" } },
-      includeSecrets: { type: "boolean" },
-      includeSecretsPhrase: { type: "string" }
-    }
+    workspace: Type.Optional(
+      Type.String({ description: "OpenClaw workspace path. Default: config workspace, else ~/.openclaw." }),
+    ),
+    out: Type.Optional(
+      Type.String({ description: "Vault output directory. Default: config vaultOut; one of the two is required." }),
+    ),
+    profile: Type.Optional(Profile),
+    policy: Type.Optional(Type.String({ description: "Liquefy policy file (.json/.yaml)." })),
+    maxBytesPerRun: Type.Optional(Type.Integer({ minimum: 0 })),
+    listLimit: Type.Optional(Type.Integer({ minimum: 1 })),
+    allow: Type.Optional(Type.Array(Type.String())),
+    deny: Type.Optional(Type.Array(Type.String())),
+    allowCategories: Type.Optional(Type.Array(Type.String())),
+    includeSecrets: Type.Optional(Type.Boolean()),
+    includeSecretsPhrase: Type.Optional(Type.String()),
   };
 }
 
-function applySchema() {
-  const s = schemaBase("Pack an OpenClaw workspace with Liquefy (explicit opt-in, optional secure mode).");
-  s.properties.verifyMode = { type: "string", enum: ["full", "fast", "off"] };
-  s.properties.workers = { type: "integer", minimum: 0 };
-  s.properties.secure = { type: "boolean" };
-  s.properties.noChunking = { type: "boolean" };
-  s.properties.unsafePermsOk = { type: "boolean" };
-  s.required = ["out"];
-  return s;
-}
+const ScanParams = Type.Object(baseParams(), {
+  additionalProperties: false,
+  description: "Read-only Liquefy workspace scan (safe default).",
+});
 
-function scanSchema() {
-  const s = schemaBase("Read-only Liquefy workspace scan (safe default).");
-  s.required = ["out"];
-  return s;
-}
+const ApplyParams = Type.Object(
+  {
+    ...baseParams(),
+    verifyMode: Type.Optional(Type.Union([Type.Literal("full"), Type.Literal("fast"), Type.Literal("off")])),
+    workers: Type.Optional(Type.Integer({ minimum: 0 })),
+    secure: Type.Optional(Type.Boolean()),
+    noChunking: Type.Optional(Type.Boolean()),
+    unsafePermsOk: Type.Optional(Type.Boolean()),
+  },
+  {
+    additionalProperties: false,
+    description: "Pack an OpenClaw workspace with Liquefy (explicit opt-in, optional secure mode).",
+  },
+);
 
-function registerToolCompat(api, name, spec, handler, options = {}) {
-  if (!api?.registerTool) return false;
-  // Newer style: registerTool({ name, ...spec, handler, optional })
-  if (api.registerTool.length <= 1) {
-    api.registerTool({
-      name,
-      ...spec,
-      handler,
-      optional: !!options.optional,
-    });
-    return true;
-  }
-  // Legacy style fallback
-  api.registerTool(name, spec, handler, options);
-  return true;
-}
+const ConfigSchema = Type.Object(
+  {
+    binaryPath: Type.Optional(
+      Type.String({
+        description:
+          "Path to Liquefy CLI binary or script (defaults to LIQUEFY_OPENCLAW_BIN env var or `liquefy`).",
+      }),
+    ),
+    workspace: Type.Optional(
+      Type.String({ description: "Default OpenClaw workspace path. Defaults to ~/.openclaw." }),
+    ),
+    vaultOut: Type.Optional(
+      Type.String({
+        description: "Default vault output directory (required for scan/apply if not supplied by tool input).",
+      }),
+    ),
+    profile: Type.Optional(Profile),
+    policyFile: Type.Optional(Type.String({ description: "Optional shared Liquefy policy file (.json/.yaml)." })),
+    requireSecureByDefault: Type.Optional(
+      Type.Boolean({ description: "If true, apply runs pass --secure and require LIQUEFY_SECRET." }),
+    ),
+    maxBytesPerRun: Type.Optional(Type.Integer({ minimum: 0 })),
+    listLimit: Type.Optional(Type.Integer({ minimum: 1 })),
+  },
+  { additionalProperties: false },
+);
 
-function registerCommandCompat(api, name, handler) {
-  if (!api?.registerCommand) return false;
-  if (api.registerCommand.length <= 1) {
-    api.registerCommand({ name, handler });
-    return true;
-  }
-  api.registerCommand(name, handler);
-  return true;
-}
-
-export default async function register(api) {
-  const cfg =
-    (typeof api?.getConfig === "function" ? api.getConfig("liquefy") : null) ||
-    api?.config?.liquefy ||
-    {};
+/** Status payload for /liquefy_status. Probes the local Liquefy CLI version (cached). */
+export async function buildLiquefyStatus(cfg = {}) {
   const compatibility = await getLiquefyCompatibility(cfg);
-
-  registerToolCompat(
-    api,
-    "liquefy_scan",
-    {
-      description: "Read-only Liquefy scan for an OpenClaw workspace (safe default; no writes).",
-      inputSchema: scanSchema(),
+  return {
+    ok: true,
+    plugin: "liquefy",
+    version: PLUGIN_VERSION,
+    tools: ["liquefy_scan", "liquefy_pack_apply"],
+    compatibility,
+    defaults: {
+      profile: cfg.profile || "default",
+      workspace: cfg.workspace || "~/.openclaw",
+      secure: !!cfg.requireSecureByDefault,
+      minimumCliVersion: MIN_LIQUEFY_OPENCLAW_VERSION,
     },
-    async (input = {}) => {
-      const payload = await runLiquefyOpenclaw("scan", input, cfg);
-      return payload;
-    },
-    { optional: false },
-  );
-
-  registerToolCompat(
-    api,
-    "liquefy_pack_apply",
-    {
-      description: "Pack an OpenClaw workspace with Liquefy (explicit writes; optional secure mode).",
-      inputSchema: applySchema(),
-    },
-    async (input = {}) => {
-      const payload = await runLiquefyOpenclaw("apply", input, cfg);
-      return payload;
-    },
-    { optional: true },
-  );
-
-  registerCommandCompat(api, "liquefy_status", async () => {
-    return {
-      ok: true,
-      plugin: "liquefy",
-      version: PLUGIN_VERSION,
-      tools: ["liquefy_scan", "liquefy_pack_apply"],
-      compatibility,
-      defaults: {
-        profile: cfg.profile || "default",
-        workspace: cfg.workspace || "~/.openclaw",
-        secure: !!cfg.requireSecureByDefault,
-        minimumCliVersion: MIN_LIQUEFY_OPENCLAW_VERSION,
-      },
-      notes: [
-        "liquefy_scan is read-only and safe by default",
-        "liquefy_pack_apply is optional/allowlisted and shells out to Liquefy CLI JSON mode",
-        `plugin expects Liquefy OpenClaw CLI >= ${MIN_LIQUEFY_OPENCLAW_VERSION}`,
-      ],
-    };
-  });
+    notes: [
+      "liquefy_scan is read-only and safe by default",
+      "liquefy_pack_apply is optional/allowlisted and shells out to Liquefy CLI JSON mode",
+      `plugin expects Liquefy OpenClaw CLI >= ${MIN_LIQUEFY_OPENCLAW_VERSION}`,
+    ],
+  };
 }
+
+const entry = defineToolPlugin({
+  id: "liquefy",
+  name: "Liquefy",
+  description:
+    "Liquefy CLI wrapper for OpenClaw: a read-only workspace scan (liquefy_scan) and an " +
+    "explicit, optional pack/apply (liquefy_pack_apply), with a vault-scan PII gate on inputs.",
+  configSchema: ConfigSchema,
+  tools: (tool) => [
+    tool({
+      name: "liquefy_scan",
+      label: "Liquefy scan",
+      description: "Read-only Liquefy scan for an OpenClaw workspace (safe default; no writes).",
+      parameters: ScanParams,
+      execute: (params, config) => runLiquefyOpenclaw("scan", params, config),
+    }),
+    tool({
+      name: "liquefy_pack_apply",
+      label: "Liquefy pack/apply",
+      description: "Pack an OpenClaw workspace with Liquefy (explicit writes; optional secure mode).",
+      parameters: ApplyParams,
+      optional: true,
+      execute: (params, config) => runLiquefyOpenclaw("apply", params, config),
+    }),
+  ],
+});
+
+// The SDK entry registers the tools; the status command is added alongside them.
+const registerTools = entry.register;
+entry.register = (api) => {
+  registerTools(api);
+  if (typeof api?.registerCommand !== "function") return;
+  api.registerCommand({
+    name: "liquefy_status",
+    description: "Show the Liquefy plugin version, Liquefy CLI compatibility and defaults.",
+    acceptsArgs: false,
+    handler: async () => ({
+      text: JSON.stringify(await buildLiquefyStatus(api.pluginConfig ?? {}), null, 2),
+    }),
+  });
+};
+
+export default entry;

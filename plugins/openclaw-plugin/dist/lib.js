@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { vaultGuard } from "./vault-scan.js";
 
 export const DEFAULT_RISKY_PHRASE = "I UNDERSTAND THIS MAY LEAK SECRETS";
-export const PLUGIN_VERSION = "0.1.1";
+export const PLUGIN_VERSION = "0.2.0";
 export const MIN_LIQUEFY_OPENCLAW_VERSION = "1.1.0";
 
 const compatibilityCache = new Map();
