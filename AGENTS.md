@@ -3,6 +3,10 @@
 > **You are an AI agent.** This file tells you everything you need to operate Liquefy.
 > Read this FIRST. It replaces reading the README, docs, or source code for 95% of tasks.
 
+For what each component does, what has been demonstrated and what is not established, see
+[REVIEW.md](./REVIEW.md) (generated from `evidence/claims.json`; validate with
+`node scripts/check-claims-registry.mjs`).
+
 ## One-Line Setup
 
 **macOS / Linux:**

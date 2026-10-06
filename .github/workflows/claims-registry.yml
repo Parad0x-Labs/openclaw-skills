@@ -1,0 +1,24 @@
+name: Claims registry
+
+# Validates evidence/claims.json (schema, network labels on deployment claims,
+# package version binding, paths and links) and checks that the REVIEW.md
+# capability table matches the registry. No dependencies are installed.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: node scripts/check-claims-registry.mjs

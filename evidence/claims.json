@@ -1,0 +1,423 @@
+{
+  "schema_version": 1,
+  "repository": "Parad0x-Labs/openclaw-skills",
+  "snapshot": {
+    "default_branch": "main",
+    "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+    "observed_at": "2026-10-06T08:23:22Z",
+    "method": "GitHub API for the default-branch head; npm registry metadata (read-only) for publication"
+  },
+  "claims": [
+    {
+      "id": "x402-pay.capped-payments",
+      "plain_claim": "x402-pay pays x402 endpoints in USDC through the operator's own signer and refuses a seller amount above maxAmountUsdc before building a transaction.",
+      "component": "skills/x402-pay",
+      "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+      "source_paths": [
+        "skills/x402-pay/src/client.ts",
+        "skills/x402-pay/src/index.ts",
+        "skills/x402-pay/src/constants.ts",
+        "skills/x402-pay/src/signer.ts"
+      ],
+      "implementation_status": "implemented",
+      "package_version": {
+        "name": "@parad0x_labs/openclaw-x402-pay",
+        "package_json": "skills/x402-pay/package.json",
+        "git_version": "2.0.1",
+        "npm_latest": "2.0.0",
+        "npm_checked_at": "2026-10-06T08:23:41Z"
+      },
+      "publication_status": "published-older-version",
+      "network": null,
+      "program_id": null,
+      "deployed_build_hash": null,
+      "source_build_match": "not-applicable",
+      "authority_assumptions": [
+        "The operator's wallet signs every transaction; the skill receives only a serialized transaction to sign."
+      ],
+      "evidence_checked_at": "2026-10-06",
+      "proof_files": [
+        "skills/x402-pay/test/approval.test.mjs",
+        "skills/x402-pay/test/resolve.test.mjs"
+      ],
+      "test_command": "cd skills/x402-pay && npm ci --ignore-scripts && npm test",
+      "test_run": {
+        "result": "pass",
+        "date": "2026-10-06",
+        "environment": "node:22 container, network off, sources from git archive of c103eac",
+        "command": "npm test (skills/x402-pay)",
+        "note": "13 of 13 passed"
+      },
+      "mocks_or_skips": [
+        "Tests do not broadcast a transaction."
+      ],
+      "demonstrated_properties": [
+        "mainnet payments refused unless allowMainnet=true",
+        "seller amount above maxAmountUsdc refused before a transaction is built",
+        "own payment confirmed at finalized commitment"
+      ],
+      "not_demonstrated": [
+        "that the cap includes the protocol fee: the 5 bps fee leg is added on top of the capped seller amount",
+        "a mainnet payment in this review pass"
+      ],
+      "operational_limitations": [],
+      "supersedes": null
+    },
+    {
+      "id": "x402-gate.onchain-verification",
+      "plain_claim": "x402-gate verifies a USDC payment on-chain at finalized commitment before serving, with a durable replay store required on mainnet.",
+      "component": "skills/x402-gate",
+      "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+      "source_paths": [
+        "skills/x402-gate/src/onchain.ts",
+        "skills/x402-gate/src/index.ts",
+        "skills/x402-gate/src/replay.ts",
+        "skills/x402-gate/src/gate.ts"
+      ],
+      "implementation_status": "implemented",
+      "package_version": {
+        "name": "@parad0x_labs/openclaw-x402-gate",
+        "package_json": "skills/x402-gate/package.json",
+        "git_version": "2.0.1",
+        "npm_latest": "2.0.0",
+        "npm_checked_at": "2026-10-06T08:23:41Z"
+      },
+      "publication_status": "published-older-version",
+      "network": null,
+      "program_id": null,
+      "deployed_build_hash": null,
+      "source_build_match": "not-applicable",
+      "authority_assumptions": [
+        "The seller trusts its configured RPC endpoint.",
+        "Protocol fee leg goes to a treasury address pinned in source."
+      ],
+      "evidence_checked_at": "2026-10-06",
+      "proof_files": [
+        "skills/x402-gate/test/fee-split.test.mts",
+        "skills/x402-gate/test/manifest.test.mjs"
+      ],
+      "test_command": "cd skills/x402-gate && npm ci --ignore-scripts && npm test",
+      "test_run": {
+        "result": "pass",
+        "date": "2026-10-06",
+        "environment": "node:22 container, network off, sources from git archive of c103eac",
+        "command": "npm test (skills/x402-gate)",
+        "note": "13 of 13 passed"
+      },
+      "mocks_or_skips": [
+        "Tests use mocked RPC transactions."
+      ],
+      "demonstrated_properties": [
+        "exactly one SPL Memo carrying the receipt hash required",
+        "recipient balance increase of at least the amount",
+        "5 bps fee leg to the pinned treasury",
+        "signature and nonce consumed in a file-backed replay store (required on mainnet)",
+        "payer ed25519 presenter authentication mandatory on mainnet"
+      ],
+      "not_demonstrated": [
+        "a signed receipt: the receipt is an unsigned SHA-256 hash both sides can compute",
+        "on-chain anchoring or netting (neither is done by this skill)"
+      ],
+      "operational_limitations": [],
+      "supersedes": null
+    },
+    {
+      "id": "payment-session.metered-billing",
+      "plain_claim": "payment-session tracks metered and subscription charges for an agent session and suggests when to pay.",
+      "component": "plugins/payment-session",
+      "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+      "source_paths": [
+        "plugins/payment-session/src/session.ts",
+        "plugins/payment-session/src/tools.ts"
+      ],
+      "implementation_status": "prototype",
+      "package_version": {
+        "name": "@parad0x_labs/openclaw-payment-session",
+        "package_json": "plugins/payment-session/package.json",
+        "git_version": "0.1.0",
+        "npm_latest": "0.1.0",
+        "npm_checked_at": "2026-10-06T08:23:41Z"
+      },
+      "publication_status": "published",
+      "network": null,
+      "program_id": null,
+      "deployed_build_hash": null,
+      "source_build_match": "not-applicable",
+      "authority_assumptions": [
+        "record_settled trusts the amount the agent reports."
+      ],
+      "evidence_checked_at": "2026-10-06",
+      "proof_files": [
+        "plugins/payment-session/test/session.test.mjs"
+      ],
+      "test_command": "cd plugins/payment-session && npm ci --ignore-scripts && npm test",
+      "test_run": {
+        "result": "not-run",
+        "date": null,
+        "environment": "node:22 container",
+        "note": "Container ran out of memory during npm ci in this pass."
+      },
+      "mocks_or_skips": [],
+      "demonstrated_properties": [
+        "in-memory per-session accounting",
+        "check_settlement_due never suggests more than the remaining budget"
+      ],
+      "not_demonstrated": [
+        "enforcement of the session cap on pay_x402",
+        "on-chain verification of settled amounts",
+        "persistence across restarts"
+      ],
+      "operational_limitations": [],
+      "supersedes": null
+    },
+    {
+      "id": "mcp-server.read-tools",
+      "plain_claim": "The MCP server exposes quote, receipt hashing, identity lookup, .null resolution and stack status tools without submitting transactions.",
+      "component": "skills/mcp-server",
+      "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+      "source_paths": [
+        "skills/mcp-server/src/index.ts",
+        "skills/mcp-server/src/anchor.ts"
+      ],
+      "implementation_status": "implemented",
+      "package_version": {
+        "name": "@parad0x_labs/mcp-server",
+        "package_json": "skills/mcp-server/package.json",
+        "git_version": "0.2.0",
+        "npm_latest": "0.2.0",
+        "npm_checked_at": "2026-10-06T08:23:41Z"
+      },
+      "publication_status": "published",
+      "network": null,
+      "program_id": null,
+      "deployed_build_hash": null,
+      "source_build_match": "not-applicable",
+      "authority_assumptions": [
+        "Read lookups trust the configured SOLANA_RPC_URL."
+      ],
+      "evidence_checked_at": "2026-10-06",
+      "proof_files": [
+        "skills/mcp-server/package.json"
+      ],
+      "test_command": "cd skills/mcp-server && npm ci --ignore-scripts && npm test",
+      "test_run": {
+        "result": "pass",
+        "date": "2026-10-06",
+        "environment": "node:22 container, network off, sources from git archive of c103eac",
+        "command": "npm test (skills/mcp-server)",
+        "note": "29 of 29 passed"
+      },
+      "mocks_or_skips": [],
+      "demonstrated_properties": [
+        "no sendTransaction or sendRawTransaction call in src/"
+      ],
+      "not_demonstrated": [
+        "receipt anchoring (unavailable until a receipt_anchor deployment is configured)"
+      ],
+      "operational_limitations": [],
+      "supersedes": null
+    },
+    {
+      "id": "agent-passport.identity-lookup",
+      "plain_claim": "agent-passport resolves an agent's .null name and ETH to Solana wallet binding against the on-chain owner record.",
+      "component": "plugins/agent-passport",
+      "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+      "source_paths": [
+        "plugins/agent-passport/src/passport.ts"
+      ],
+      "implementation_status": "implemented",
+      "package_version": {
+        "name": "@parad0x_labs/openclaw-agent-passport",
+        "package_json": "plugins/agent-passport/package.json",
+        "git_version": "0.2.0",
+        "npm_latest": "0.1.0",
+        "npm_checked_at": "2026-10-06T08:23:41Z"
+      },
+      "publication_status": "published-older-version",
+      "network": null,
+      "program_id": null,
+      "deployed_build_hash": null,
+      "source_build_match": "not-applicable",
+      "authority_assumptions": [],
+      "evidence_checked_at": "2026-10-06",
+      "proof_files": [
+        "plugins/agent-passport/package.json"
+      ],
+      "test_command": "cd plugins/agent-passport && npm install --ignore-scripts && npm test",
+      "test_run": {
+        "result": "not-run",
+        "date": null,
+        "environment": "node:22 container",
+        "note": "Container ran out of memory during install in this pass."
+      },
+      "mocks_or_skips": [],
+      "demonstrated_properties": [
+        "read-only lookups"
+      ],
+      "not_demonstrated": [
+        "writes: .null write builders are unavailable until the registrar relaunch",
+        "a live lookup in this review pass"
+      ],
+      "operational_limitations": [
+        "src/passport.ts still exports RECEIPT_ANCHOR = the retired mainnet pilot program 6HSRGivd...; it should be removed or marked retired."
+      ],
+      "supersedes": null
+    },
+    {
+      "id": "liquefy.vault-compression",
+      "plain_claim": "Liquefy packs agent run folders into vaults with format-aware engines and keeps an archive only after a byte-exact round-trip check.",
+      "component": "Liquefy vault appliance (Python)",
+      "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+      "source_paths": [
+        "api/orchestrator/orchestrator.py",
+        "tools/tracevault_pack.py"
+      ],
+      "implementation_status": "implemented",
+      "package_version": null,
+      "publication_status": "not-applicable",
+      "network": null,
+      "program_id": null,
+      "deployed_build_hash": null,
+      "source_build_match": "not-applicable",
+      "authority_assumptions": [],
+      "evidence_checked_at": "2026-10-06",
+      "proof_files": [
+        "benchmarks/latest_ci.csv",
+        "tests/test_roundtrip_byteperfect.py",
+        "tests/golden/engine_profiles_v1.json",
+        "docs/VAULT_APPLIANCE.md"
+      ],
+      "test_command": "pip install -r requirements.txt pytest && pytest tests/",
+      "test_run": null,
+      "mocks_or_skips": [],
+      "demonstrated_properties": [
+        "round-trip verification with fallback to plain zstd (MRTV)",
+        "committed CI benchmark (benchmarks/latest_ci.csv, 2026-02-26): 114.7x versus zstd -19 45.3x on a repetitive JSON fixture; 5.86x versus 5.86x on VPC flow logs",
+        "near-parity on dense prose (1.02x versus 1.06x for zstd -19, per docs/VAULT_APPLIANCE.md)"
+      ],
+      "not_demonstrated": [
+        "the 103.9x versus 63.8x README figure: no committed result file, and the documented fixture set (19 files, 1.9 MB) differs from the reproduce command's directory",
+        "ratios on customer data"
+      ],
+      "operational_limitations": [
+        "Ratios depend on input format; engines target agent traces and machine logs."
+      ],
+      "supersedes": null
+    },
+    {
+      "id": "liquefy.vault-encryption",
+      "plain_claim": "Liquefy vaults are encrypted with AES-256-GCM by default and packing stops when no secret is configured.",
+      "component": "Liquefy vault appliance (Python)",
+      "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+      "source_paths": [
+        "api/liquefy_security.py",
+        "tools/tracevault_pack.py"
+      ],
+      "implementation_status": "implemented",
+      "package_version": null,
+      "publication_status": "not-applicable",
+      "network": null,
+      "program_id": null,
+      "deployed_build_hash": null,
+      "source_build_match": "not-applicable",
+      "authority_assumptions": [
+        "The operator keeps LIQUEFY_SECRET confidential."
+      ],
+      "evidence_checked_at": "2026-10-06",
+      "proof_files": [
+        "tests/test_crypto.py",
+        "tests/test_security_lsec_v2.py"
+      ],
+      "test_command": "pytest tests/test_crypto.py tests/test_security_lsec_v2.py",
+      "test_run": null,
+      "mocks_or_skips": [],
+      "demonstrated_properties": [
+        "AES-256-GCM with a PBKDF2-SHA256 per-tenant key (300k iterations) and the header as associated data",
+        "--no-encrypt is an explicit opt-out"
+      ],
+      "not_demonstrated": [
+        "key rotation or escrow"
+      ],
+      "operational_limitations": [],
+      "supersedes": null
+    },
+    {
+      "id": "liquefy.vault-anchor",
+      "plain_claim": "A vault fingerprint can be posted to Solana as an SPL Memo so a third party can check that the vault existed.",
+      "component": "tools/liquefy_vault_anchor.py",
+      "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+      "source_paths": [
+        "tools/liquefy_vault_anchor.py"
+      ],
+      "implementation_status": "implemented",
+      "package_version": null,
+      "publication_status": "not-applicable",
+      "network": null,
+      "program_id": null,
+      "deployed_build_hash": null,
+      "source_build_match": "not-applicable",
+      "authority_assumptions": [
+        "The memo is signed by the operator's own keypair; the SPL Memo program stores no state."
+      ],
+      "evidence_checked_at": "2026-10-06",
+      "proof_files": [
+        "docs/VAULT_TOOLS.md"
+      ],
+      "test_command": null,
+      "test_run": null,
+      "mocks_or_skips": [],
+      "demonstrated_properties": [
+        "memo text LQFY|<16 hex>|<16 hex>|<key fingerprint>: 64-bit prefixes of the vault hash and chain tip"
+      ],
+      "not_demonstrated": [
+        "full 32-byte hashes on-chain (the module docstring says 80 bytes with 32-byte hashes; the code posts 16-hex-character prefixes)",
+        "an anchor transaction in this review pass"
+      ],
+      "operational_limitations": [
+        "Default cluster is mainnet; pass --cluster devnet for tests.",
+        "For unsigned vaults the key fingerprint is derived from LIQUEFY_SECRET without a salt."
+      ],
+      "supersedes": null
+    },
+    {
+      "id": "context-capsule.openclaw-skill",
+      "plain_claim": "The OpenClaw context-capsule skill replaces older turns with an extractive summary and keeps the most recent messages verbatim, locally and without network access.",
+      "component": "skills/context-capsule",
+      "source_sha": "c103eac1c3c832bdbe65f89e549d7f2193ae8686",
+      "source_paths": [
+        "skills/context-capsule"
+      ],
+      "implementation_status": "implemented",
+      "package_version": {
+        "name": "@parad0x_labs/openclaw-context-capsule",
+        "package_json": "skills/context-capsule/package.json",
+        "git_version": "1.7.0",
+        "npm_latest": "1.7.0",
+        "npm_checked_at": "2026-10-06T08:23:41Z"
+      },
+      "publication_status": "published",
+      "network": null,
+      "program_id": null,
+      "deployed_build_hash": null,
+      "source_build_match": "not-applicable",
+      "authority_assumptions": [],
+      "evidence_checked_at": "2026-10-06",
+      "proof_files": [
+        "docs/CONTEXT_CAPSULE_DATAFLOW.md",
+        "docs/CONTEXT_CAPSULE_BENCHMARK.md"
+      ],
+      "test_command": "cd skills/context-capsule && npm ci --ignore-scripts && npm test",
+      "test_run": null,
+      "mocks_or_skips": [],
+      "demonstrated_properties": [
+        "deterministic extractive capsule (up to 1,400 tokens by default) plus the last 10 messages verbatim; no model call; no network"
+      ],
+      "not_demonstrated": [
+        "retrieval of omitted details (the skill has none)",
+        "end-to-end task token or cost savings"
+      ],
+      "operational_limitations": [],
+      "supersedes": null
+    }
+  ]
+}
