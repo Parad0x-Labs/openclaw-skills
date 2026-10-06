@@ -568,7 +568,7 @@ function getStackStatus(): object {
 // ---------------------------------------------------------------------------
 
 const server = new Server(
-  { name: "parad0x-mcp", version: "0.2.0" },
+  { name: "parad0x-mcp", version: "0.2.1" },
   {
     capabilities: {
       tools: {},

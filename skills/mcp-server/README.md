@@ -2,7 +2,7 @@
 
 Exposes the Parad0x Labs stack as MCP tools. Works with Claude Desktop, Cursor, Windsurf, and any MCP-compatible agent runtime.
 
-Version 0.2.0 replaces the withdrawn 0.1.x releases. It uses no program ID controlled
+Since 0.2.0 (which replaced the withdrawn 0.1.x releases) it uses no program ID controlled
 by a compromised key: receipt anchoring and nullifier lookups refuse with a clear
 error, and no tool submits an on-chain transaction. Both programs now run on devnet
 under a fresh key (2026-10-06; see [Programs](#programs)); this release does not call them.

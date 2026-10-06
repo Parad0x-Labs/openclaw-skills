@@ -13,7 +13,8 @@ Cursor, Windsurf, and any MCP-compatible agent runtime.
 
 ## When to use
 
-- Your agent needs to quote, pay, or verify an x402-gated API call.
+- Your agent needs a payment quote for an x402-gated API call (paying is done by your
+  own x402 client, e.g. `openclaw-x402-pay`).
 - You want to compute receipt hashes locally (this server does not anchor on-chain).
 - You need to resolve a legacy `.null` name or read an existing Dark Passport binding.
 - You want to compress a batch of receipts or check program addresses and status.
@@ -28,7 +29,11 @@ Cursor, Windsurf, and any MCP-compatible agent runtime.
 | `build_outcome_receipt` | Build a signed outcome receipt with PnL, accuracy, or delivery result |
 | `compress_receipts` | Compress a batch of receipts (Liquefy format) |
 | `resolve_null` | Resolve a `.null` name (read-only) on the legacy mainnet registrar |
+| `check_nullifier` | Validate a privacy-proof nullifier; refuses with a clear error and makes no lookup (a devnet `dark_nullifier_record` runs at `CPMfXL73v9PDmxyPLTM97bzrNa5eg2AEpsac9XKzX9et`) |
+| `private_compute` | Encrypt locally, send ciphertext to an executor, return input/result hashes; `anchor:true` computes the commitment locally and refuses the on-chain anchor |
 | `get_stack_status` | Program addresses and their current status |
+| `create_wallet` | Generate a new Solana keypair file on this machine (preview unless `confirm:true`); returns only the public key and path |
+| `get_scope_status` / `grant_write_consent` / `revoke_write_consent` | Show and manage the per-session write consent for `anchor_receipt` and `private_compute` |
 
 ## Deployment status
 
