@@ -6,18 +6,23 @@ paste-and-go checklist so a publish session is mechanical.
 
 > npm scope: `@parad0x_labs` (public). Log in once: `npm login`.
 
-## State today (verified 2026-08-25)
+## State today (checked against the npm registry 2026-10-06)
 
-All public packages are published and match the local sources:
-
-| Package | On npm | Local / canonical | Action |
+| Package | On npm (latest) | This repo | Action |
 |---|---|---|---|
-| `@parad0x_labs/openclaw-context-capsule` | **1.7.0** ✅ | this repo `skills/context-capsule` @ 1.7.0 | up to date — no action |
-| `@parad0x_labs/null-mcp` | **0.10.0** ✅ | private packages repo `packages/null-mcp` | up to date — no action |
-| `@parad0x_labs/mcp-server` | **0.1.1** ✅ | this repo `skills/mcp-server` @ 0.1.1 | up to date — no action |
-| `@parad0x_labs/openclaw-x402-pay` | **2.0.0** ✅ | this repo `skills/x402-pay` @ 2.0.0 | up to date — no action |
-| `@parad0x_labs/openclaw-x402-gate` | **2.0.0** ✅ | this repo `skills/x402-gate` @ 2.0.0 | up to date — no action |
-| `@parad0x_labs/openclaw-agent-passport` | **0.1.0** ✅ | this repo `plugins/agent-passport` @ 0.1.0 | up to date — no action |
+| `@parad0x_labs/openclaw-context-capsule` | 1.7.0 | `skills/context-capsule` @ 1.7.0 | matches — no action |
+| `@parad0x_labs/null-mcp` | 0.10.0 | private packages repo `packages/null-mcp` | not part of this repo |
+| `@parad0x_labs/mcp-server` | 0.1.1 (deprecated, withdrawn) | `skills/mcp-server` @ 0.2.0 | publish 0.2.0 |
+| `@parad0x_labs/openclaw-x402-pay` | 2.0.0 | `skills/x402-pay` @ 2.0.1 | publish 2.0.1 (README and description strings) |
+| `@parad0x_labs/openclaw-x402-gate` | 2.0.0 | `skills/x402-gate` @ 2.0.1 | publish 2.0.1 (README) |
+| `@parad0x_labs/openclaw-payment-session` | 0.1.0 | `plugins/payment-session` @ 0.1.0 | no action (README/SKILL.md differ only cosmetically) |
+| `@parad0x_labs/openclaw-agent-passport` | 0.1.0 | `plugins/agent-passport` @ 0.1.1 | publish 0.1.1 |
+| `@parad0x_labs/openclaw-web0-onboard` | 0.1.0 | `plugins/web0-onboard` @ 0.2.0 | publish 0.2.0 |
+
+Release tarballs are built and tested from the committed sources in an isolated
+container (`npm ci --ignore-scripts`, network disconnected for build, test and
+`npm pack`), then published as files: `npm publish <name>-<version>.tgz --access public`.
+None of the release tarballs carries a preinstall, install or postinstall script.
 
 Before any future publish, refresh this table against `npm view
 @parad0x_labs/<pkg> version` and each local `package.json`. The publish
