@@ -53,10 +53,10 @@ test("assertNotSeized: throws on both seized pre-incident IDs", () => {
   }
 });
 
-test("assertNotSeized: passes for a live program ID", () => {
-  // receipt_anchor (live mainnet) must not be flagged.
+test("assertNotSeized: passes for a non-seized program ID", () => {
+  // receipt_anchor on devnet (the anchor_receipt write target) must not be flagged.
   assert.doesNotThrow(() =>
-    assertNotSeized("6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN", "receipt_anchor"),
+    assertNotSeized("CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst", "receipt_anchor"),
   );
 });
 

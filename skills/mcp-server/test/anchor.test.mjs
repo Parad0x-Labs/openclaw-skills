@@ -1,6 +1,7 @@
 /**
- * Byte-exact tests for the receipt_anchor encoder (../dist/anchor.js), against
- * the verified on-chain ABI. Hermetic — no network.
+ * Byte-exact tests for the receipt_anchor encoder (../dist/anchor.js) and the
+ * devnet-only cluster guard (mainnet receipt_anchor retired 2026-07-14).
+ * Hermetic — no network.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -12,9 +13,16 @@ import {
   bucketIdForUnix,
   RECEIPT_ANCHOR_VERSION,
   FLAG_HAS_BUCKET_ID,
+  RECEIPT_ANCHOR_DEVNET,
+  RECEIPT_ANCHOR_MAINNET_RETIRED,
+  ANCHOR_RPC_DEVNET,
+  GENESIS_HASH,
+  classifyRpcUrl,
+  assertDevnetAnchorCluster,
 } from "../dist/anchor.js";
 
-const RECEIPT_ANCHOR = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN";
+const RECEIPT_ANCHOR = "CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst"; // devnet write target
+const RETIRED_MAINNET = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN";
 const PAYER = "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM";
 const HASH = "a".repeat(64);
 
@@ -63,4 +71,45 @@ test("buildAnchorIx rejects a malformed hash", () => {
     () => buildAnchorIx({ payer: PAYER, receiptHashHex: "abcd", programId: RECEIPT_ANCHOR, bucketId: 1n }),
     /64 hex/,
   );
+});
+
+// ── deployments + cluster guard ──────────────────────────────────────────────
+
+test("write target is the devnet receipt_anchor; mainnet id is marked retired", () => {
+  assert.equal(RECEIPT_ANCHOR_DEVNET, RECEIPT_ANCHOR);
+  assert.equal(RECEIPT_ANCHOR_MAINNET_RETIRED, RETIRED_MAINNET);
+  assert.notEqual(RECEIPT_ANCHOR_DEVNET, RECEIPT_ANCHOR_MAINNET_RETIRED);
+  assert.match(ANCHOR_RPC_DEVNET, /devnet/);
+});
+
+test("buildAnchorIx refuses the retired mainnet program id", () => {
+  assert.throws(
+    () => buildAnchorIx({ payer: PAYER, receiptHashHex: HASH, programId: RETIRED_MAINNET, bucketId: 1n }),
+    /retired 2026-07-14/,
+  );
+});
+
+test("classifyRpcUrl: mainnet / devnet / testnet / unknown", () => {
+  for (const u of [
+    "https://solana-rpc.publicnode.com",
+    "https://solana.publicnode.com",
+    "https://solana.api.onfinality.io/public",
+    "https://api.mainnet-beta.solana.com",
+    "https://mainnet.helius-rpc.com/?api-key=x",
+  ]) {
+    assert.equal(classifyRpcUrl(u), "mainnet", u);
+  }
+  assert.equal(classifyRpcUrl("https://api.devnet.solana.com"), "devnet");
+  assert.equal(classifyRpcUrl("https://devnet.helius-rpc.com/?api-key=x"), "devnet");
+  assert.equal(classifyRpcUrl("https://api.testnet.solana.com"), "testnet");
+  assert.equal(classifyRpcUrl("http://127.0.0.1:8899"), "unknown");
+  assert.equal(classifyRpcUrl("not a url"), "unknown");
+});
+
+test("assertDevnetAnchorCluster: devnet passes, mainnet gets the retired error, others refused", () => {
+  assert.doesNotThrow(() => assertDevnetAnchorCluster(GENESIS_HASH.devnet));
+  assert.throws(() => assertDevnetAnchorCluster(GENESIS_HASH.mainnet), /retired 2026-07-14/);
+  assert.throws(() => assertDevnetAnchorCluster(GENESIS_HASH.mainnet), /CPQ8Y1bd/);
+  assert.throws(() => assertDevnetAnchorCluster(GENESIS_HASH.testnet), /not devnet/);
+  assert.throws(() => assertDevnetAnchorCluster("someLocalValidatorGenesis"), /not devnet/);
 });

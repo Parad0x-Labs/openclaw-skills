@@ -25,8 +25,7 @@ export const READ_TOOLS = new Set<string>([
 
 /**
  * Pre-incident program IDs whose upgrade authority is under hostile control
- * (deployer key stolen 2026-06-14). NEVER call these — they await a clean
- * redeploy under Squads multisig after the trusted-setup ceremony.
+ * (deployer key stolen 2026-06-14). NEVER call these.
  */
 export const SEIZED_PROGRAMS = new Set<string>([
   "EepqzVBNuzCgD6XGiB19pDDhzFG3gUL4z1nabBYxpfjS",
@@ -38,7 +37,7 @@ export function assertNotSeized(programId: string, name: string): void {
   if (SEIZED_PROGRAMS.has(programId)) {
     throw new Error(
       `${name} (${programId}) is a SEIZED pre-incident program — upgrade authority is under hostile control. ` +
-        `Do not call this program. Post-redeploy IDs will be updated here after the trusted-setup ceremony.`
+        `Do not call this program.`
     );
   }
 }

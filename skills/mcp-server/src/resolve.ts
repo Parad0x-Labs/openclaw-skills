@@ -1,8 +1,10 @@
 /**
  * .null name resolution — name → on-chain owner + x402 endpoint + stealth meta.
  *
- * Vendored (no cross-skill import). Reads the live mainnet registrar's NullDomain
- * account. Pure parse is split out so it's unit-testable without a network.
+ * Vendored (no cross-skill import). Read-only: reads the NullDomain account on
+ * the legacy mainnet registrar (retired 2026-08-29; records readable,
+ * registration/updates/transfers frozen). Pure parse is split out so it's
+ * unit-testable without a network.
  *
  * NullDomain layout (registrar state.rs): disc[1]@0=0x4E · name[64]@1 ·
  * owner[32]@65 · arweave_txid[32]@97 · x402_endpoint[128]@129 (UTF-8, null-padded,
@@ -13,8 +15,8 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { createHash } from "crypto";
 
-/** Live mainnet .null registrar (clean redeploy under multisig). NEVER the
- *  seized pre-incident H4wbFJ…. */
+/** Legacy mainnet .null registrar (retired 2026-08-29; records readable,
+ *  registration/updates/transfers frozen). NEVER the seized pre-incident H4wbFJ…. */
 export const NULL_REGISTRAR_MAINNET = "NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np";
 
 /** Keyless public-node mainnet RPC for resolution reads. */
@@ -81,7 +83,7 @@ export function parseNullDomain(name: string, pda: string, data: Buffer): NullRe
   return res;
 }
 
-/** Resolve a .null name on mainnet. */
+/** Resolve a .null name (read-only) against the legacy mainnet registrar. */
 export async function resolveNullName(
   name: string,
   rpcUrl = RESOLVE_RPC_MAINNET,

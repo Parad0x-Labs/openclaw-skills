@@ -14,8 +14,19 @@ import {
   assertNotSeized,
   canSubmitWrite,
 } from "./scope.js";
-import { resolveNullName } from "./resolve.js";
-import { buildAnchorIx, deriveBucketPda, bucketIdForUnix } from "./anchor.js";
+import { resolveNullName, NULL_REGISTRAR_MAINNET } from "./resolve.js";
+import {
+  buildAnchorIx,
+  deriveBucketPda,
+  bucketIdForUnix,
+  classifyRpcUrl,
+  assertDevnetAnchorCluster,
+  RECEIPT_ANCHOR_DEVNET,
+  RECEIPT_ANCHOR_MAINNET_RETIRED,
+  RECEIPT_ANCHOR_MAINNET_RETIRED_ON,
+  ANCHOR_RPC_DEVNET,
+  MAINNET_ANCHOR_RETIRED_ERROR,
+} from "./anchor.js";
 import { generateWallet, resolveWalletPath } from "./wallet.js";
 import { writeFileSync, existsSync, mkdirSync, chmodSync } from "fs";
 import { dirname } from "path";
@@ -24,23 +35,38 @@ import { dirname } from "path";
 // Constants
 // ---------------------------------------------------------------------------
 
-// Live on Solana mainnet — verified against evidence/mainnet + evidence/zk.
-// Private-reputation stack (reputation gate + commitment tree) is ZK-verified on devnet; mainnet clean redeploy pending the trusted-setup ceremony.
+// Current deployments:
+//   - receipt_anchor runs on devnet (CPQ8Y1bd…) — anchor_receipt writes there only.
+//     The mainnet receipt_anchor (6HSRGivd…) was retired 2026-07-14; its historical
+//     anchors stay readable, but it cannot be invoked.
+//   - The gen-2 mainnet programs (passport/identity, semaphore, nullifier, proof gates,
+//     dark_secp256r1_vault, …) are retired: program-owned accounts stay readable,
+//     nothing can be invoked. Tools that touch them are read-only.
+//   - The ZK stack (Dark NULL, reputation gate, commitment tree) is on devnet.
 // WARNING: dark_x402_access_gate and dark_nullifier_record are SEIZED pre-incident IDs —
 // deployer key F6Fr… stolen 2026-06-14; attacker holds upgrade authority. Do not call them.
 const PROGRAMS = {
-  // SEIZED — pre-incident; attacker holds upgrade authority. Replaced by post-redeploy IDs (pending ceremony).
+  // SEIZED — pre-incident; attacker holds upgrade authority. Never called.
   dark_x402_access_gate: "EepqzVBNuzCgD6XGiB19pDDhzFG3gUL4z1nabBYxpfjS",
-  // SEIZED — pre-incident; attacker holds upgrade authority. Replaced by post-redeploy IDs (pending ceremony).
+  // SEIZED — pre-incident; attacker holds upgrade authority. Never called.
   dark_nullifier_record: "24tmjEd1DhPW2QuPV6BzkFFHrq2PtELoLqv5cuv2Xu65",
+  // devnet
   dark_reputation_gate: "9nN7UTTT5hgKnc2LZTqr3qaLLSt5PxWUrDbpUTGYHRxp",
+  // devnet
   receipt_commitment_tree: "8jC8QGiDJRRxhbPXMX5wJnGUq89xJZ2LsHMdbn2urCas",
-  receipt_anchor: "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN",
+  // devnet — the anchor_receipt write target
+  receipt_anchor: RECEIPT_ANCHOR_DEVNET,
+  // mainnet, retired 2026-07-14 — historical anchors readable, cannot be invoked
+  receipt_anchor_mainnet_retired: RECEIPT_ANCHOR_MAINNET_RETIRED,
+  // mainnet, retired — accounts readable, cannot be invoked
   dark_secp256r1_vault: "3hbbtjeSrTVYXq6eRwjeofDe2DCPh3n8cfN6kZcQfewi",
+  // mainnet, retired — existing ETH↔Solana bindings readable (lookup_passport), cannot be invoked
   dark_secp256k1_auth: "AqwBbV13AoczhoELwP8oxT3nDqB6MsLWXauNzHkssZ9B",
+  // mainnet, retired — accounts readable, cannot be invoked
   dark_semaphore: "Ev7HEFhhKTXk6kS2Y6ssbUcK9C7E6yZ589jJNjUrQV5p",
+  // SPL token mint (mainnet)
   null_token: "8EeDdvCRmFAzVD4takkBrNNwkeUTUQh4MscRK5Fzpump",
-  // demo/stub — NOT a real verifier (hardcoded proof bypass); see get_stack_status.
+  // deprecated demo gate — NOT a real verifier (hardcoded proof bypass); see get_stack_status.
   dark_bn254_gate: "GCptvBYF8S6eVYoh15B7WAESc54FUHCpN1Ui6aHeQYZd",
 } as const;
 
@@ -53,12 +79,12 @@ const DEVNET_PROGRAMS = {
 const EXPLORER_BASE = "https://explorer.solana.com";
 const DEFAULT_RPC = "https://solana-rpc.publicnode.com";
 
-function explorerTx(sig: string): string {
-  return `${EXPLORER_BASE}/tx/${sig}`;
+function explorerTx(sig: string, cluster?: "devnet"): string {
+  return `${EXPLORER_BASE}/tx/${sig}${cluster ? `?cluster=${cluster}` : ""}`;
 }
 
-function explorerAccount(addr: string): string {
-  return `${EXPLORER_BASE}/address/${addr}`;
+function explorerAccount(addr: string, cluster?: "devnet"): string {
+  return `${EXPLORER_BASE}/address/${addr}${cluster ? `?cluster=${cluster}` : ""}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -212,7 +238,7 @@ async function x402GetQuote(
       price_atomic: 100000, // 0.1 USDC in atomic units (6 decimals)
       currency: "USDC",
       expiry: Date.now() + 60_000,
-      payment_address: PROGRAMS.receipt_anchor,
+      payment_address: null,
       network: "solana-mainnet",
       note: `Endpoint returned HTTP ${res.status} (not 402). This is a mock quote showing the x402 format. A real x402-gated endpoint returns 402 with x-dnp-offer header.`,
       mock: true,
@@ -225,7 +251,7 @@ async function x402GetQuote(
 
 async function anchorReceipt(
   receiptHashHex: string,
-  rpcUrl = DEFAULT_RPC,
+  rpcUrl = ANCHOR_RPC_DEVNET,
   confirm = false,
   consented = false
 ): Promise<object> {
@@ -233,17 +259,33 @@ async function anchorReceipt(
     return { error: "receipt_hash_hex must be exactly 64 hex characters (32 bytes)" };
   }
 
+  // The mainnet receipt_anchor is retired (2026-07-14) — refuse a mainnet RPC up
+  // front, before any keypair handling, preview, or network call. RPC URLs that
+  // don't name their cluster are checked authoritatively by genesis hash below.
+  if (classifyRpcUrl(rpcUrl) === "mainnet") {
+    return {
+      error: MAINNET_ANCHOR_RETIRED_ERROR,
+      retired: true,
+      mainnet_program: RECEIPT_ANCHOR_MAINNET_RETIRED,
+      mainnet_retired_on: RECEIPT_ANCHOR_MAINNET_RETIRED_ON,
+      devnet_program: RECEIPT_ANCHOR_DEVNET,
+      devnet_rpc: ANCHOR_RPC_DEVNET,
+    };
+  }
+
   const keypair = loadKeypair();
 
   if (!keypair) {
-    // Dry-run mode — return mock response so agents can see the format
+    // Dry-run mode — return a mock response so agents can see the output format
     const mockSig = Buffer.from(randomBytes(64)).toString("base64url").slice(0, 88);
     return {
       solana_tx: mockSig,
-      explorer_url: explorerTx(mockSig),
+      explorer_url: explorerTx(mockSig, "devnet"),
       slot: 0,
+      cluster: "devnet",
+      program: RECEIPT_ANCHOR_DEVNET,
       dry_run: true,
-      note: "SOLANA_KEYPAIR env var not set. Set it to a JSON array of 64 bytes to submit real transactions. This is a dry-run response showing the output format.",
+      note: "SOLANA_KEYPAIR env var not set. Set it to a JSON array of 64 bytes to submit real devnet transactions. This is a dry-run response showing the output format.",
     };
   }
 
@@ -259,27 +301,37 @@ async function anchorReceipt(
     return {
       preview: true,
       would_submit: {
-        program: PROGRAMS.receipt_anchor,
+        cluster: "devnet",
+        program: RECEIPT_ANCHOR_DEVNET,
         instruction: "anchor v1 (version 0x01, pinned hourly bucket)",
         receipt_hash_hex: receiptHashHex,
         fee_payer: keypair.publicKey.toBase58(),
         bucket_id: bucketId.toString(),
-        bucket_pda: deriveBucketPda(bucketId, PROGRAMS.receipt_anchor).toBase58(),
+        bucket_pda: deriveBucketPda(bucketId, RECEIPT_ANCHOR_DEVNET).toBase58(),
       },
       blocked_reason: decision.blockedReason,
-      note: "No transaction was sent. This is a preview of exactly what WOULD be submitted.",
+      note: "No transaction was sent. This is a preview of exactly what WOULD be submitted (devnet; the RPC's genesis hash is checked before sending).",
     };
   }
 
   try {
     const connection = new Connection(rpcUrl, "confirmed");
 
-    // receipt_anchor single-anchor, 42-byte pinned-bucket form (verified ABI):
+    // Authoritative cluster check: only a devnet genesis hash may proceed. A
+    // mainnet RPC gets the "retired 2026-07-14" refusal; nothing is signed or sent.
+    try {
+      assertDevnetAnchorCluster(await connection.getGenesisHash());
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { error: msg, cluster_check: "failed", devnet_program: RECEIPT_ANCHOR_DEVNET };
+    }
+
+    // receipt_anchor single-anchor, 42-byte pinned-bucket form:
     // data [0x01][0x01][32B hash][u64 LE bucket_id]; keys payer + bucket PDA + system.
     const ix = buildAnchorIx({
       payer: keypair.publicKey.toBase58(),
       receiptHashHex,
-      programId: PROGRAMS.receipt_anchor,
+      programId: RECEIPT_ANCHOR_DEVNET,
       bucketId,
     });
 
@@ -298,8 +350,10 @@ async function anchorReceipt(
 
     return {
       solana_tx: sig,
-      explorer_url: explorerTx(sig),
+      explorer_url: explorerTx(sig, "devnet"),
       slot,
+      cluster: "devnet",
+      program: RECEIPT_ANCHOR_DEVNET,
       dry_run: false,
     };
   } catch (err: unknown) {
@@ -369,6 +423,8 @@ async function lookupPassport(
     registered,
     pda: pda ?? undefined,
     program: programAddress,
+    network: "solana-mainnet",
+    program_status: "retired (legacy mainnet program; existing bindings readable, no new bindings)",
     explorer_url: pda ? explorerAccount(pda) : explorerAccount(programAddress),
   };
 }
@@ -559,7 +615,7 @@ async function privateCompute(params: {
 
     const anchorResult = await anchorReceipt(
       commitmentHex,
-      rpc_url ?? process.env.SOLANA_RPC_URL ?? DEFAULT_RPC,
+      rpc_url ?? process.env.PARAD0X_ANCHOR_RPC_URL ?? ANCHOR_RPC_DEVNET,
       false,
       consented === true
     ) as Record<string, unknown>;
@@ -590,63 +646,90 @@ async function privateCompute(params: {
 
 function getStackStatus(): object {
   // The pre-incident mainnet IDs for dark_x402_access_gate + dark_nullifier_record
-  // are seized (hostile upgrade authority) and are NOT listed here — see
-  // pending_clean_redeploy below. Never advertise a seized address as live.
+  // are seized (hostile upgrade authority) and are NOT listed here. Never
+  // advertise a seized address as live.
+  const retired = "retired (mainnet) — accounts readable, cannot be invoked";
   return {
     programs: [
       {
         name: "receipt_anchor",
-        address: PROGRAMS.receipt_anchor,
-        status: "live",
-        explorer_url: explorerAccount(PROGRAMS.receipt_anchor),
-        description: "Anchors 32-byte receipt hashes permanently on Solana mainnet",
+        cluster: "devnet",
+        address: RECEIPT_ANCHOR_DEVNET,
+        status: "live (devnet)",
+        explorer_url: explorerAccount(RECEIPT_ANCHOR_DEVNET, "devnet"),
+        description: "Anchors 32-byte receipt hashes on Solana devnet — the anchor_receipt write target",
+      },
+      {
+        name: "receipt_anchor (mainnet)",
+        cluster: "mainnet",
+        address: RECEIPT_ANCHOR_MAINNET_RETIRED,
+        status: `retired ${RECEIPT_ANCHOR_MAINNET_RETIRED_ON} — historical anchors readable, cannot be invoked`,
+        explorer_url: explorerAccount(RECEIPT_ANCHOR_MAINNET_RETIRED),
+        description: "Anchored receipts on mainnet June–July 2026",
+      },
+      {
+        name: "null_registrar (mainnet)",
+        cluster: "mainnet",
+        address: NULL_REGISTRAR_MAINNET,
+        status: "retired 2026-08-29 — records readable (resolve_null works), registration/updates/transfers frozen",
+        explorer_url: explorerAccount(NULL_REGISTRAR_MAINNET),
+        description: "Legacy .null name registrar",
       },
       {
         name: "dark_secp256r1_vault",
+        cluster: "mainnet",
         address: PROGRAMS.dark_secp256r1_vault,
-        status: "live",
+        status: retired,
         explorer_url: explorerAccount(PROGRAMS.dark_secp256r1_vault),
-        description: "WebAuthn / P-256 vault — stores secp256r1 public keys on-chain",
+        description: "WebAuthn / P-256 vault — stored secp256r1 public keys on-chain",
       },
       {
         name: "dark_secp256k1_auth",
+        cluster: "mainnet",
         address: PROGRAMS.dark_secp256k1_auth,
-        status: "live",
+        status: retired,
         explorer_url: explorerAccount(PROGRAMS.dark_secp256k1_auth),
-        description: "ETH address binding — links MetaMask / secp256k1 identities to Solana wallets",
-      },
-      {
-        name: "dark_bn254_gate",
-        address: PROGRAMS.dark_bn254_gate,
-        status: "stub — do not use",
-        explorer_url: explorerAccount(PROGRAMS.dark_bn254_gate),
-        description: "DEPRECATED demo gate with a hardcoded proof bypass — NOT a real verifier. Superseded by dark_x402_access_gate (real Groth16 BN254). Listed for transparency only.",
+        description: "ETH address binding — existing MetaMask / secp256k1 ↔ Solana bindings are readable via lookup_passport",
       },
       {
         name: "dark_semaphore",
+        cluster: "mainnet",
         address: PROGRAMS.dark_semaphore,
-        status: "live",
+        status: retired,
         explorer_url: explorerAccount(PROGRAMS.dark_semaphore),
         description: "Semaphore-style anonymous group membership proofs",
       },
       {
+        name: "dark_bn254_gate",
+        address: PROGRAMS.dark_bn254_gate,
+        status: "deprecated — do not use",
+        explorer_url: explorerAccount(PROGRAMS.dark_bn254_gate),
+        description: "Deprecated demo gate with a hardcoded proof bypass — NOT a real verifier. Superseded by the Groth16 BN254 access gate on devnet.",
+      },
+      {
         name: "null_token",
+        cluster: "mainnet",
         address: PROGRAMS.null_token,
-        status: "live",
+        status: "live (SPL token mint)",
         explorer_url: explorerAccount(PROGRAMS.null_token),
-        description: "NULL SPL token — native currency of the Parad0x Labs protocol economy",
+        description: "NULL SPL token",
       },
     ],
-    pending_clean_redeploy: {
-      note: "Shielded x402 access gate + single-use nullifier: ZK-verified on devnet; mainnet clean redeploy pending the trusted-setup ceremony. Pre-incident mainnet program IDs are retired and withheld.",
-      status: "devnet — mainnet clean redeploy pending",
+    shielded_access: {
+      note: "Shielded x402 access gate + single-use nullifier: ZK-verified on devnet. Pre-incident mainnet program IDs are retired and withheld.",
+      status: "devnet",
       programs: ["dark_x402_access_gate", "dark_nullifier_record"],
     },
     private_reputation_stack: {
-      note: "Private track-record proof — ZK-verified on devnet; mainnet rolling out (single-party VK until the trusted-setup ceremony finalizes).",
-      status: "devnet — mainnet rolling out",
+      note: "Private track-record proof — ZK-verified on devnet (single-party VK).",
+      status: "devnet",
       dark_reputation_gate: PROGRAMS.dark_reputation_gate,
       receipt_commitment_tree: PROGRAMS.receipt_commitment_tree,
+    },
+    dark_null: { status: "devnet", note: "Canonical Dark NULL runs on devnet." },
+    x402_payments: {
+      status: "live — devnet by default, mainnet opt-in",
+      note: "x402 USDC settlement is a plain SPL transfer; it does not depend on any retired program.",
     },
     packages: [
       "@parad0x_labs/mcp-server",
@@ -660,7 +743,7 @@ function getStackStatus(): object {
       "@parad0x_labs/nulllive-sdk",
     ],
     github: "https://github.com/parad0x-labs/dna-x402",
-    network: "solana-mainnet",
+    anchor_network: "solana-devnet",
     status_timestamp: new Date().toISOString(),
   };
 }
@@ -703,7 +786,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "anchor_receipt",
         description:
-          "Anchor a 32-byte receipt hash permanently on Solana mainnet via the receipt_anchor program. Read-only by default: returns a PREVIEW unless the operator enabled writes (PARAD0X_MCP_ALLOW_WRITE=1) AND you pass confirm:true.",
+          "Anchor a 32-byte receipt hash on Solana devnet via the receipt_anchor program (CPQ8Y1bd…). The mainnet receipt_anchor was retired 2026-07-14 — a mainnet RPC is refused with a clear error and nothing is sent. Read-only by default: returns a PREVIEW unless the operator enabled writes (PARAD0X_MCP_ALLOW_WRITE=1) AND you pass confirm:true.",
         inputSchema: {
           type: "object",
           properties: {
@@ -713,7 +796,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             rpc_url: {
               type: "string",
-              description: "Solana RPC URL (default: publicnode public mainnet RPC)",
+              description: "Solana devnet RPC URL (default: PARAD0X_ANCHOR_RPC_URL or https://api.devnet.solana.com). Mainnet RPCs are refused — the mainnet receipt_anchor is retired.",
             },
             confirm: {
               type: "boolean",
@@ -726,7 +809,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "lookup_passport",
         description:
-          "Look up a Dark Passport — check if an ETH address or Solana wallet has a verified identity binding on Solana mainnet",
+          "Look up a Dark Passport — check if an ETH address or Solana wallet has an identity binding on the legacy mainnet dark_secp256k1_auth program (retired; existing bindings readable, no new bindings). Read-only.",
         inputSchema: {
           type: "object",
           properties: {
@@ -814,7 +897,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "get_stack_status",
-        description: "Get the current status of all Parad0x Labs mainnet programs",
+        description: "Get the current status of Parad0x Labs programs: devnet write targets, retired mainnet programs (readable), and x402 settlement",
         inputSchema: {
           type: "object",
           properties: {},
@@ -841,11 +924,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             anchor: {
               type: "boolean",
-              description: "If true, commit (input_hash, result_hash) to Solana via receipt_anchor",
+              description: "If true, commit (input_hash, result_hash) to Solana devnet via receipt_anchor",
             },
             rpc_url: {
               type: "string",
-              description: "Solana RPC URL (default: publicnode public mainnet RPC)",
+              description: "Solana devnet RPC URL used for anchoring (default: PARAD0X_ANCHOR_RPC_URL or https://api.devnet.solana.com). Mainnet RPCs are refused.",
             },
           },
           required: ["plaintext_input", "executor_endpoint"],
@@ -876,7 +959,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "resolve_null",
         description:
-          "Resolve a .null name on Solana mainnet → its owner, published x402 endpoint (pay-by-name), stealth meta-address, and Arweave content. Read-only: derives the NullDomain PDA on the live registrar and reads it. Returns payable_by_name=true when an x402 endpoint is set.",
+          "Resolve a .null name → its owner, published x402 endpoint (pay-by-name), stealth meta-address, and Arweave content. Read-only: derives the NullDomain PDA on the legacy mainnet registrar (retired 2026-08-29; records readable, registration/updates frozen) and reads it. Returns payable_by_name=true when an x402 endpoint is set.",
         inputSchema: {
           type: "object",
           properties: {
@@ -886,7 +969,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             rpc_url: {
               type: "string",
-              description: "Solana mainnet RPC URL (default: publicnode mainnet). The registrar is on mainnet.",
+              description: "Solana mainnet RPC URL (default: publicnode mainnet). The legacy registrar's records live on mainnet.",
             },
           },
           required: ["name"],
@@ -954,7 +1037,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
         result = await anchorReceipt(
           receipt_hash_hex,
-          rpc_url ?? process.env.SOLANA_RPC_URL ?? DEFAULT_RPC,
+          rpc_url ?? process.env.PARAD0X_ANCHOR_RPC_URL ?? ANCHOR_RPC_DEVNET,
           confirm === true,
           sessionConsent.has("anchor_receipt")
         );
@@ -1074,8 +1157,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           note: r.found
             ? r.x402_endpoint
               ? "Resolved — payable by name via the published x402 endpoint."
-              : "Registered, but no x402 endpoint published yet (the owner must set one via UPDATE_ENDPOINT)."
-            : "Not registered on mainnet.",
+              : "Registered, but no x402 endpoint is published. The legacy registrar is retired (2026-08-29), so endpoints can no longer be updated."
+            : "Not registered on the legacy mainnet registrar.",
+          registrar_status: "retired 2026-08-29 — records readable, registration/updates/transfers frozen",
         };
         break;
       }

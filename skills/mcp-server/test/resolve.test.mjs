@@ -13,7 +13,7 @@ import {
   parseNullDomain,
 } from "../dist/resolve.js";
 
-test("registrar is the clean mainnet id (not the seized H4wbFJ)", () => {
+test("registrar is the legacy mainnet id (retired, readable) — not the seized H4wbFJ", () => {
   assert.equal(NULL_REGISTRAR_MAINNET, "NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np");
   assert.notEqual(NULL_REGISTRAR_MAINNET, "H4wbFJucY9shJt95N8Bra532Z4nnkKhGEfqWvLcYfuDm");
 });
