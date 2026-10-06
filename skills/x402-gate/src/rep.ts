@@ -24,8 +24,9 @@
  * TRUST GATES — stated plainly, never overclaimed:
  *   - The proving key is a single-party development setup. A multi-party ceremony is
  *     required before this is mainnet trust by itself.
- *   - This module is OFF-CHAIN verification. On-chain trustless verification needs a
- *     clean (non-seized) reputation-gate redeploy under the multisig — that is "next".
+ *   - This module is OFF-CHAIN verification. A devnet dark_reputation_gate runs at
+ *     Cyz7WjdmDTRGBE6kJpDiHUHDkQ5jq2C8BrnHcZm8st2g (fresh key, 2026-10-06); this module
+ *     does not call it. Mainnet on-chain verification is "next".
  *   - ROOT TRUST is the load-bearing seam: a proof against an attacker-chosen `root`
  *     proves nothing (the caller could fabricate a tree of fake receipts). The gate MUST
  *     bind `root` to a trusted source — an allowlist of anchored roots, or a rootVerifier

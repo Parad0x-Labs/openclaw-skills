@@ -19,3 +19,15 @@ test("x402-gate manifest declares the v2026.6.1 security floor", () => {
 test("x402-gate manifest requires a recipient address (no silent custody default)", () => {
   assert.ok(manifest.configSchema?.required?.includes("recipientAddress"));
 });
+
+test("x402-gate manifest declares its tools and the package targets this host API", () => {
+  const pkg = JSON.parse(readFileSync(join(here, "..", "package.json"), "utf8"));
+  assert.deepEqual(manifest.contracts?.tools, ["x402_challenge", "x402_verify", "x402_rep_challenge", "x402_rep_verify"]);
+  assert.equal(manifest.version, pkg.version);
+  assert.deepEqual(pkg.openclaw?.extensions, ["./src/index.ts"]);
+  // "1.x" made OpenClaw 2026.x skip the plugin at discovery.
+  assert.equal(pkg.openclaw?.compat?.pluginApi, ">=2026.6.1");
+  for (const k of ["repMinCount", "repMinVolume", "repWindowSeconds", "repTrustedRoots"]) {
+    assert.ok(manifest.configSchema.properties[k], `configSchema declares ${k}`);
+  }
+});

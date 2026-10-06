@@ -1,6 +1,6 @@
 {
   "name": "@parad0x_labs/openclaw-x402-gate",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Charge other agents for your OpenClaw skill or API with x402 micropayments on Solana. Mint a 402 challenge, verify the payment, then serve. Funds go straight to your own wallet address — the skill never holds keys or custody.",
   "type": "module",
   "main": "./src/index.ts",
@@ -27,7 +27,7 @@
       "./src/index.ts"
     ],
     "compat": {
-      "pluginApi": "1.x"
+      "pluginApi": ">=2026.6.1"
     },
     "build": {
       "openclawVersion": ">=1.0.0"

@@ -7,7 +7,9 @@
   "enabledByDefault": false,
   "configSchema": {
     "type": "object",
-    "additionalProperties": false,
+    "required": [
+      "recipientAddress"
+    ],
     "properties": {
       "recipientAddress": {
         "type": "string",
@@ -19,8 +21,16 @@
         "description": "Default price per request in USDC. Default: 0.01."
       },
       "network": {
-        "type": "string",
-        "enum": ["solana-mainnet", "solana-devnet"],
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "solana-mainnet"
+          },
+          {
+            "type": "string",
+            "const": "solana-devnet"
+          }
+        ],
         "description": "Settlement network. Default: solana-mainnet. Set solana-devnet to test."
       },
       "requireOnChain": {
@@ -58,9 +68,48 @@
       },
       "rpcUrl": {
         "type": "string",
-        "description": "Solana RPC URL for on-chain confirmation. A private/dedicated node is strongly recommended on mainnet (the RPC is fully trusted for the settlement decision)."
+        "description": "Solana RPC URL for on-chain confirmation. REQUIRED on mainnet: use a private/dedicated node (the RPC is fully trusted for the settlement decision). Optional on devnet (defaults to the public devnet endpoint)."
+      },
+      "repMinCount": {
+        "type": "number",
+        "minimum": 0,
+        "description": "zk-rep: receipt-count floor a caller's private reputation proof must meet. Set with repMinVolume to enable x402_rep_challenge / x402_rep_verify."
+      },
+      "repMinVolume": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "description": "zk-rep: total-volume floor (atomic USDC units) the proof must meet. Set with repMinCount."
+      },
+      "repWindowSeconds": {
+        "type": "number",
+        "minimum": 0,
+        "description": "zk-rep: how far back proven receipts may start (seconds). Default: 90 days."
+      },
+      "repTrustedRoots": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "zk-rep: anchored receipt-tree roots (decimal field elements) the gate trusts. A proof against any other root is rejected."
       }
     },
-    "required": ["recipientAddress"]
+    "additionalProperties": false
+  },
+  "name": "x402 Gate",
+  "description": "Charge other agents for your skill or API with x402 micropayments on Solana. Mint a 402 challenge, verify the payment (confirmed on-chain), then serve. Funds go to your own wallet address — the skill holds no keys.",
+  "version": "2.0.2",
+  "contracts": {
+    "tools": [
+      "x402_challenge",
+      "x402_verify",
+      "x402_rep_challenge",
+      "x402_rep_verify"
+    ]
   }
 }

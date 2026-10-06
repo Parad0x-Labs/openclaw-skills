@@ -50,7 +50,7 @@ breaks another.
   loop (matching receipt hashes, no shared state). Optional:
   [`context-capsule`](../context-capsule) to keep long selling sessions cheap.
 
-## The two tools
+## The four tools
 
 ```
 x402_challenge({ resource, description? })
@@ -58,7 +58,18 @@ x402_challenge({ resource, description? })
 
 x402_verify({ header, resource })
   → { valid, payerAddress, amountUsdc, receiptHash, onChainVerified, capability? }
+
+x402_rep_challenge()
+  → { type: "x402-zk-rep", require: { min_count, min_volume, window_start_floor }, trustedRoots }
+
+x402_rep_verify({ proof, publicSignals, expectedAgentCommitment? })
+  → { valid, reason?, agentCommitment, reputationNullifier, root, provenMinCount, provenMinVolume }
 ```
+
+The two `x402_rep_*` tools gate on a private reputation proof (a Groth16 proof from
+`x402-pay`'s `prove_reputation`) instead of, or alongside, a payment. They need
+`repMinCount` and `repMinVolume` in config (below); without them they return an error.
+Verification runs off-chain in this skill.
 
 ## Config
 
@@ -67,13 +78,16 @@ x402_verify({ header, resource })
   "plugins": {
     "entries": {
       "x402-gate": {
-        "recipientAddress": "YOUR_SOLANA_WALLET",      // required — where funds land
-        "priceUsdc": 0.05,
-        "network": "solana-mainnet",                    // default
-        "challengeSecret": "<random 32+ char secret>",  // REQUIRED on mainnet
-        "replayStorePath": "/var/lib/x402/replay.log",  // REQUIRED on mainnet (durable, single-instance)
-        "acknowledgeSingleInstance": true,              // confirm you run ONE instance
-        "rpcUrl": "https://<your-private-rpc>"          // recommended on mainnet
+        "enabled": true,
+        "config": {
+          "recipientAddress": "YOUR_SOLANA_WALLET",      // required — where funds land
+          "priceUsdc": 0.05,
+          "network": "solana-mainnet",                    // default
+          "challengeSecret": "<random 32+ char secret>",  // REQUIRED on mainnet
+          "replayStorePath": "/var/lib/x402/replay.log",  // REQUIRED on mainnet (durable, single-instance)
+          "acknowledgeSingleInstance": true,              // confirm you run ONE instance
+          "rpcUrl": "https://<your-private-rpc>"          // REQUIRED on mainnet
+        }
       }
     }
   }
@@ -93,7 +107,15 @@ x402_verify({ header, resource })
 | `requirePresenterAuth` | `true` | Caller signs the nonce with the payer key. **Forced on for mainnet** |
 | `challengeSecret` | — | MACs nonces + capability tokens. **Required on mainnet** |
 | `receiptScopeSeconds` | `0` | >0 issues a reusable capability token (pay once, reuse within scope) |
-| `rpcUrl` | — | Solana RPC for settlement checks. Use a private node on mainnet |
+| `rpcUrl` | — | Solana RPC for settlement checks. **Required on mainnet** (use a private node); devnet defaults to the public devnet endpoint |
+| `repMinCount` | — | zk-rep: receipt-count floor a reputation proof must meet. Set with `repMinVolume` to enable the `x402_rep_*` tools |
+| `repMinVolume` | — | zk-rep: total-volume floor (atomic USDC units) |
+| `repWindowSeconds` | 90 days | zk-rep: how far back proven receipts may start |
+| `repTrustedRoots` | — | zk-rep: anchored receipt-tree roots the gate trusts; a proof against any other root is rejected |
+
+Plugin settings go under `config` in the plugin entry: OpenClaw validates
+`plugins.entries.x402-gate.config` against the schema in `openclaw.plugin.json` and
+rejects unknown keys.
 
 > **Mainnet is fail-closed.** On `solana-mainnet` the gate refuses to serve (every
 > call returns an error) unless: `requireOnChain` is true; replay is durable

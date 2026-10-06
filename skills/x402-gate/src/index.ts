@@ -215,26 +215,104 @@ function repPolicyFromConfig(config: GateConfig): RepPolicy | null {
   };
 }
 
+/** Plugin config schema. `openclaw plugins build` generates the manifest
+ *  configSchema (openclaw.plugin.json) from this object, and the host validates
+ *  `plugins.entries.x402-gate.config` against that manifest before the plugin loads. */
 const ConfigSchema = Type.Object(
   {
-    recipientAddress: Type.Optional(Type.String()),
-    priceUsdc: Type.Optional(Type.Union([Type.Number(), Type.String()])),
-    network: Type.Optional(Type.String()),
-    requireOnChain: Type.Optional(Type.Union([Type.Boolean(), Type.String()])),
-    dedupe: Type.Optional(Type.Union([Type.Boolean(), Type.String()])),
-    requirePresenterAuth: Type.Optional(Type.Union([Type.Boolean(), Type.String()])),
-    receiptScopeSeconds: Type.Optional(Type.Union([Type.Number(), Type.String()])),
-    acknowledgeSingleInstance: Type.Optional(Type.Union([Type.Boolean(), Type.String()])),
-    acknowledgeExternalReplayStore: Type.Optional(Type.Union([Type.Boolean(), Type.String()])),
-    challengeSecret: Type.Optional(Type.String()),
-    replayStorePath: Type.Optional(Type.String()),
-    rpcUrl: Type.Optional(Type.String()),
-    repMinCount: Type.Optional(Type.Number()),
-    repMinVolume: Type.Optional(Type.Union([Type.String(), Type.Number()])),
-    repWindowSeconds: Type.Optional(Type.Number()),
-    repTrustedRoots: Type.Optional(Type.Array(Type.String())),
+    recipientAddress: Type.String({
+      description:
+        "YOUR Solana wallet address (base58) — where payments settle. Public key only; the skill never holds custody. Required.",
+    }),
+    priceUsdc: Type.Optional(
+      Type.Number({ minimum: 0, description: "Default price per request in USDC. Default: 0.01." }),
+    ),
+    network: Type.Optional(
+      Type.Union([Type.Literal("solana-mainnet"), Type.Literal("solana-devnet")], {
+        description: "Settlement network. Default: solana-mainnet. Set solana-devnet to test.",
+      }),
+    ),
+    requireOnChain: Type.Optional(
+      Type.Boolean({
+        description:
+          "Accept a payment only after its transaction is confirmed settled on Solana (revenue-grade). Default: true. Setting false runs only the structural/presenter checks and does NOT verify the payment settled on-chain — a caller can pass the gate without actually paying (the tx signature is caller-supplied and never checked against the chain). Testing only; never set false for real paid content on mainnet.",
+      }),
+    ),
+    dedupe: Type.Optional(
+      Type.Boolean({
+        description:
+          "Reject a settled payment that has already been redeemed (single-use). Default: true. In-memory unless replayStorePath is set.",
+      }),
+    ),
+    replayStorePath: Type.Optional(
+      Type.String({
+        description:
+          "LOCAL disk path for a restart-durable single-instance replay store (a shared/network FS across hosts defeats the single-instance lock — don't use one). REQUIRED on mainnet when dedupe=true — the gate refuses in-memory dedupe on mainnet. For multi-instance, set dedupe=false and back replay with your own shared store.",
+      }),
+    ),
+    requirePresenterAuth: Type.Optional(
+      Type.Boolean({
+        description:
+          "Require the caller to sign the gate-issued nonce with the payer key, so an observer of the on-chain payment can't replay it for free access. Default: true, and FORCED ON for solana-mainnet (cannot be disabled). Needs an x402 client that signs the challenge nonce.",
+      }),
+    ),
+    challengeSecret: Type.Optional(
+      Type.String({
+        description:
+          "Secret used to MAC presenter-auth nonces and capability tokens. REQUIRED on mainnet (presenter-auth nonces must verify across restarts/instances). Omit only on devnet for an ephemeral per-process secret.",
+      }),
+    ),
+    receiptScopeSeconds: Type.Optional(
+      Type.Number({
+        minimum: 0,
+        description:
+          "If > 0, a verified payment returns a capability token the payer can re-present to reuse this resource WITHOUT paying again, until it expires (seconds). 'Pay once, reuse within scope' — a subscription/credit model. Default: 0 (off; pay per call). SINGLE-INSTANCE ONLY: on mainnet requires dedupe=true + replayStorePath + acknowledgeSingleInstance, and is NOT supported with dedupe=false/multi-replica (reuse would fan out across replicas).",
+      }),
+    ),
+    acknowledgeSingleInstance: Type.Optional(
+      Type.Boolean({
+        description:
+          "Attest you run a SINGLE gate instance. Required on mainnet with dedupe=true + replayStorePath, because the file-backed replay store is single-instance only (multiple replicas would each redeem a payment once). Default: false.",
+      }),
+    ),
+    acknowledgeExternalReplayStore: Type.Optional(
+      Type.Boolean({
+        description:
+          "Attest you enforce replay protection with your own durable, SHARED store (Redis/DB). Required on mainnet when dedupe=false. Default: false.",
+      }),
+    ),
+    rpcUrl: Type.Optional(
+      Type.String({
+        description:
+          "Solana RPC URL for on-chain confirmation. REQUIRED on mainnet: use a private/dedicated node (the RPC is fully trusted for the settlement decision). Optional on devnet (defaults to the public devnet endpoint).",
+      }),
+    ),
+    repMinCount: Type.Optional(
+      Type.Number({
+        minimum: 0,
+        description:
+          "zk-rep: receipt-count floor a caller's private reputation proof must meet. Set with repMinVolume to enable x402_rep_challenge / x402_rep_verify.",
+      }),
+    ),
+    repMinVolume: Type.Optional(
+      Type.Union([Type.String(), Type.Number()], {
+        description: "zk-rep: total-volume floor (atomic USDC units) the proof must meet. Set with repMinCount.",
+      }),
+    ),
+    repWindowSeconds: Type.Optional(
+      Type.Number({
+        minimum: 0,
+        description: "zk-rep: how far back proven receipts may start (seconds). Default: 90 days.",
+      }),
+    ),
+    repTrustedRoots: Type.Optional(
+      Type.Array(Type.String(), {
+        description:
+          "zk-rep: anchored receipt-tree roots (decimal field elements) the gate trusts. A proof against any other root is rejected.",
+      }),
+    ),
   },
-  { additionalProperties: true },
+  { additionalProperties: false },
 );
 
 const ChallengeParams = Type.Object({
@@ -254,6 +332,7 @@ export default defineToolPlugin({
     "Charge other agents for your skill or API with x402 micropayments on Solana. " +
     "Mint a 402 challenge, verify the payment (confirmed on-chain), then serve. " +
     "Funds go to your own wallet address — the skill holds no keys.",
+  activation: { onStartup: false },
   configSchema: ConfigSchema,
   tools: (tool) => [
     tool({
