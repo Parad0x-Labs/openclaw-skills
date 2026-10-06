@@ -57,9 +57,9 @@ const MAX_TOKEN_RUN = 256;
  * (replace X with Y / forget X / switch from X to Y / Y instead of X / X
  * deprecated), the subject is a concrete token, it does not reappear
  * affirmatively after the pivot, and it is not the new live choice. Otherwise it
- * does nothing — precision over recall, so a live choice is never struck. Graded
- * on a non-leaking held-out split: ~83% abandoned-clean, 0 wrongly-flagged-live,
- * 0 mangled, fidelity held. Set false to disable entirely.
+ * does nothing — precision over recall, so a live choice is never struck. On the
+ * 6-case set in test/supersession-bench.mjs: 6/6 abandoned subjects clean, 0 live
+ * flagged, 0 mangled (test floor 83%). Set false to disable entirely.
  */
 const SUPERSESSION_ENABLED = true;
 const STOP_WORDS = new Set([
@@ -909,6 +909,12 @@ const ATOM_URL_RE = /https?:\/\/[^\s)\]}>"']+/giu;
 const ATOM_PATH_RE = /(?:[.~]?\/)?[\w.-]+\/[\w./@+-]*\.[A-Za-z0-9]{1,8}/giu;
 const ATOM_CMD_RE = /\b(?:pnpm|npm|bun|node|git|gh|openclaw|launchctl|lsof|tail|cat|rg|jq|curl|ssh|docker|kubectl)\s+[\w./@:=-][^\n,;]*/giu;
 const ATOM_HASH_RE = /\b[A-Za-z0-9]{20,}\b/gu;
+// Bare distinctive VALUES the URL/path/command/hash passes miss: a standalone port or
+// code (3+ digits), an issue ref (#42), a version (v2.13), an ISO date, an sk- key, or a
+// hyphenated code carrying digits (NEEDLE-ZX-7742). These are the answer of a fact and are
+// short, so the length gate below would drop them — harvest them separately so a lone
+// `5433` / `#42` / `2026-07-15` survives as its own atom, not only when its line is picked.
+const ATOM_VALUE_RE = /\bsk-[A-Za-z0-9_-]{6,}\b|\b\d{4}-\d{2}-\d{2}\b|#\d{2,}\b|\bv\d+\.\d+(?:\.\d+)?\b|\b\w*-\w*\d{2,}[\w-]*\b|\b\d{3,}\b/giu;
 function extractAtoms(content) {
     const atoms = new Set();
     const harvest = (re) => {
@@ -927,6 +933,14 @@ function extractAtoms(content) {
     for (const m of content.match(ATOM_HASH_RE) ?? []) {
         if (![...atoms].some((a) => a.includes(m)))
             atoms.add(m.slice(0, 60));
+    }
+    // Bare values last, min length 2 (so `#42` survives), skipping any already contained in a
+    // URL/path/hash atom (a port inside a URL is not double-emitted).
+    ATOM_VALUE_RE.lastIndex = 0;
+    for (const m of content.match(ATOM_VALUE_RE) ?? []) {
+        const v = m.trim();
+        if (v.length >= 2 && ![...atoms].some((a) => a.includes(v)))
+            atoms.add(v.slice(0, 60));
     }
     return [...atoms];
 }

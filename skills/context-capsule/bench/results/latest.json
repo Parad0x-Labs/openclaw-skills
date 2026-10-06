@@ -1,6 +1,6 @@
 {
   "schema": "openclaw-context-capsule.fixture-bench.v1",
-  "package_version": "1.7.0",
+  "package_version": "1.7.1",
   "fixture": "agent-session-100",
   "messages": 109,
   "questions": 40,
@@ -460,7 +460,7 @@
       "capsule_all_1400": false
     }
   ],
-  "runtime_ms": 51,
+  "runtime_ms": 49,
   "node": "v22.23.3",
-  "timestamp": "2026-10-06T08:38:28.120Z"
+  "timestamp": "2026-10-06T08:48:22.632Z"
 }

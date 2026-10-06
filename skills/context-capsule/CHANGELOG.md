@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.7.1
+
+Docs and comments only; the compression code is unchanged from 1.7.0.
 
 - **Docs: measured scope.** SKILL.md fidelity figures from private sessions
   (~79% / ~93% key-signal recall) replaced with numbers from a public fixture
@@ -12,6 +14,13 @@
   skill. Before this, CI ran typecheck only and `npm test` ran locally and in
   `prepublishOnly`; the 1.7.0 notes below calling these checks "CI-gated" refer to
   that `npm test` run.
+- **Code comments.** `src/compression.ts` and `src/index.ts` comments cite the
+  public-fixture figures instead of private-session ones.
+- **Browser demo.** `demo/compression.js` regenerated from the build. The copy
+  shipped in the repo predated 1.7.0 and lacked the value-atom pass; the
+  regeneration command in `demo/README.md` now also writes the generated-file
+  header. (The demo is repo-only; it is not in the npm package.)
+- **package-lock.json** root version now matches package.json (it said 1.6.0).
 
 ## 1.7.0
 

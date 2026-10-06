@@ -118,9 +118,9 @@ const MAX_TOKEN_RUN = 256;
  * (replace X with Y / forget X / switch from X to Y / Y instead of X / X
  * deprecated), the subject is a concrete token, it does not reappear
  * affirmatively after the pivot, and it is not the new live choice. Otherwise it
- * does nothing — precision over recall, so a live choice is never struck. Graded
- * on a non-leaking held-out split: ~83% abandoned-clean, 0 wrongly-flagged-live,
- * 0 mangled, fidelity held. Set false to disable entirely.
+ * does nothing — precision over recall, so a live choice is never struck. On the
+ * 6-case set in test/supersession-bench.mjs: 6/6 abandoned subjects clean, 0 live
+ * flagged, 0 mangled (test floor 83%). Set false to disable entirely.
  */
 const SUPERSESSION_ENABLED = true;
 

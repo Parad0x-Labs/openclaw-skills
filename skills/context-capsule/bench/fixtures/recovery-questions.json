@@ -188,6 +188,7 @@
   },
   {
     "id": 32,
+    "unanswerable": true,
     "question": "Was the storage decision corrected at any point?",
     "required_keywords": ["correct", "changed", "revised", "postgres", "redis"],
     "category": "corrections"
@@ -206,12 +207,14 @@
   },
   {
     "id": 35,
+    "unanswerable": true,
     "question": "If earlier messages said to use one approach and later messages said use a different approach, which approach should be used?",
     "required_keywords": ["later", "final", "recent", "correction", "updated"],
     "category": "corrections"
   },
   {
     "id": 36,
+    "unanswerable": true,
     "question": "When instructions conflict across different points in the conversation, which instruction takes precedence?",
     "required_keywords": ["later", "last", "override", "supersede"],
     "category": "corrections",
@@ -233,6 +236,7 @@
   },
   {
     "id": 39,
+    "unanswerable": true,
     "question": "What is the final, settled decision on session storage — not an intermediate proposal, but the concluded choice?",
     "required_keywords": ["postgres", "final", "session"],
     "category": "corrections",
@@ -240,6 +244,7 @@
   },
   {
     "id": 40,
+    "unanswerable": true,
     "question": "Was the phrase 'scratch that' or an equivalent retraction used at any point, and what did it retract?",
     "required_keywords": ["scratch", "redis", "retract"],
     "category": "corrections",

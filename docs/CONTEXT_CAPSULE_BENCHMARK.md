@@ -1,6 +1,6 @@
 # Context Capsule plugin benchmark: method and results
 
-Package: `@parad0x_labs/openclaw-context-capsule` ([`skills/context-capsule`](../skills/context-capsule)), v1.7.0.
+Package: `@parad0x_labs/openclaw-context-capsule` ([`skills/context-capsule`](../skills/context-capsule)), v1.7.1 (compression code unchanged from 1.7.0).
 Results last refreshed 2026-10-06 in a network-isolated container (method below).
 Dataflow of the plugin: [CONTEXT_CAPSULE_DATAFLOW.md](CONTEXT_CAPSULE_DATAFLOW.md).
 
@@ -27,8 +27,8 @@ context this plugin contributes to a call.
 fixture used by `@parad0x_labs/context-capsule` in dna-x402:
 
 - `agent-session-100.json`: 109 messages (55 user, 54 assistant), synthetic, about building a receipt-anchoring package. SHA-256 `18b4a6590cbde822835a70d107a2c7b29f72753edcb9e2c8c905fdaa4d1942aa`.
-- `recovery-questions.json`: 40 questions with `required_keywords`. SHA-256 `9aae0170004d30e0cbd9cb40a28e3aaaed6af42e2c1fcf0160ee4462a6c65729`.
-- The questions were written together with the session by the maintainers: a development set, not a held-out evaluation. 5 questions (32, 35, 36, 39, 40) are not answerable from the session text.
+- `recovery-questions.json`: 40 questions with `required_keywords`. SHA-256 `f691e86c423a1d9bc35ce38a6a046206f162aad4514407775d984c78839ef5e0`.
+- The questions were written together with the session by the maintainers: a development set, not a held-out evaluation. 5 questions (32, 35, 36, 39, 40) are not answerable from the session text and carry `"unanswerable": true`.
 
 ## Results
 

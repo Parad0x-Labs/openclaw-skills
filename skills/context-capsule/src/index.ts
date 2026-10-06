@@ -56,10 +56,10 @@ const VAULT_PATTERNS: Array<{ key: string; re: RegExp; placeholder: string }> = 
 
 const DEFAULT_MIN_MESSAGES = 20;
 const DEFAULT_KEEP_RECENT = 10;
-// Tuned for fidelity over raw token-cut: ~1400 tokens lands near the knee of the
-// recall/compression curve (~5x reduction at ~70%+ key-signal recall on real
-// sessions) instead of the old 700 (~7.5x but ~43% recall). A high compression
-// ratio is worthless if the decisions, errors, and refs don't survive.
+// Tuned for fidelity over raw token-cut. Key-signal recall on the public fixture
+// (bench/results/fidelity-fixture.json): 42% at 700 tokens (9.2x smaller), 65% at
+// 1200 (5.4x), 86% at 2000 (3.2x); 1400 sits between the last two. A high ratio
+// is worthless if the decisions, errors, and refs don't survive.
 const DEFAULT_MAX_CAPSULE_TOKENS = 1400;
 const DEFAULT_CAPSULE_TOKEN_RATIO = 0.14;
 const DEFAULT_MIN_COMPRESS_TOKENS = 900;
@@ -236,7 +236,7 @@ class ContextCapsuleEngine implements ContextEngine {
   readonly info: ContextEngineInfo = {
     id: "context-capsule",
     name: "Context Capsule",
-    version: "1.7.0",
+    version: "1.7.1",
     ownsCompaction: false,
     turnMaintenanceMode: "background",
   };

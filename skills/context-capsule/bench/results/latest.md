@@ -1,6 +1,6 @@
 # openclaw-context-capsule public-fixture benchmark
 
-Package 1.7.0. Fixture `agent-session-100` (109 messages), 40 questions (35 answerable from the session text; unanswerable: 32, 35, 36, 39, 40). Tokenizer: chars/4 estimate. Model calls: 0.
+Package 1.7.1. Fixture `agent-session-100` (109 messages), 40 questions (35 answerable from the session text; unanswerable: 32, 35, 36, 39, 40). Tokenizer: chars/4 estimate. Model calls: 0.
 
 | Arm | Tokens per call | Keyword pass (of 40) | Of answerable |
 |---|---:|---:|---:|
@@ -14,4 +14,4 @@ Plugin default breakdown: older history 6699 tokens -> capsule 1400 tokens (syst
 
 Keyword pass is an availability check (is the answer text in what the model receives), not model task success. The plugin makes no retrieval call.
 
-Generated 2026-10-06T08:38:28.120Z with Node v22.23.3. Regenerate: `npm run build && node bench/fixture-bench.mjs`.
+Generated 2026-10-06T08:48:22.632Z with Node v22.23.3. Regenerate: `npm run build && node bench/fixture-bench.mjs`.

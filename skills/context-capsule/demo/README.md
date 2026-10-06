@@ -41,7 +41,7 @@ Regenerate after a source change:
 npm run build
 npx tsc src/platform.browser.ts --outDir demo --module esnext \
   --target es2022 --moduleResolution bundler --skipLibCheck --declaration false
-node -e 'const fs=require("fs");let s=fs.readFileSync("dist/compression.js","utf8").replace(/from "\.\/platform\.js"/g,"from \"./platform.browser.js\"");fs.writeFileSync("demo/compression.js",s)'
+node -e 'const fs=require("fs");const h="// AUTO-GENERATED for the browser demo: dist/compression.js with the platform\n// shim repointed to ./platform.browser.js (@noble/hashes + pako via import map).\n// Regenerate after build; do not edit by hand.\n";let s=fs.readFileSync("dist/compression.js","utf8").replace(/from "\.\/platform\.js"/g,"from \"./platform.browser.js\"");fs.writeFileSync("demo/compression.js",h+s)'
 mkdir -p demo/vendor/noble-hashes && cp node_modules/@noble/hashes/*.js demo/vendor/noble-hashes/
 cp node_modules/pako/dist/pako.esm.mjs demo/vendor/pako.esm.mjs
 ```
