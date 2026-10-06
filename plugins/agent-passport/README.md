@@ -39,15 +39,16 @@ signer, never here.
   transactions, no signing, no private-key access.
 - **Public RPC only** — `https://solana-rpc.publicnode.com` by default (never
   `api.mainnet-beta.solana.com`, which 403s with an Origin header).
-- **No seized program IDs** — binds only to the live `dark_secp256k1_auth` and
+- **No seized program IDs** — reads only the legacy `dark_secp256k1_auth` and
   `dark_secp256r1_vault` programs; PDA derivation is deterministic from the
   on-chain seeds.
 
 ## Status
 
-ETH↔Solana binding and the WebAuthn P-256 vault (`dark_secp256r1_vault`) run on
-Solana mainnet-beta (public beta, not yet audited). `.null` name **resolution**
-wiring lands with the null-resolver deployment — until then `nullName` is surfaced
-from config as-is.
+The ETH↔Solana binding program and the WebAuthn P-256 vault (`dark_secp256r1_vault`)
+are retired mainnet programs: existing bindings stay readable and both tools verify
+them, but no new bindings can be created. Every result carries `program_status`.
+`nullName` is surfaced from config as-is; legacy `.null` names resolve read-only via
+the mcp-server `resolve_null` tool or x402-pay pay-by-name.
 
 See [SKILL.md](./SKILL.md) for the full tool reference. MIT licensed.

@@ -8,7 +8,10 @@
  * testable logic sits in a host-free sibling module.
  *
  * Trust model:
- *   - READ-ONLY. No transactions, no signing, no private-key access.
+ *   - READ-ONLY. No transactions, no signing, no private-key access. The
+ *     identity programs it reads are retired mainnet programs: their accounts
+ *     (existing bindings) stay readable, but nothing can be invoked, so no new
+ *     bindings can be created. This plugin has no write path.
  *   - PUBLIC RPC ONLY. solana-rpc.publicnode.com by default — never
  *     api.mainnet-beta.solana.com (returns 403 with an Origin header).
  *   - No hardcoded seized or pre-incident program IDs.
@@ -16,9 +19,10 @@
 
 import { Connection, PublicKey } from "@solana/web3.js";
 
-// ── Program IDs — live mainnet deployments only ─────────────────────────────
+// ── Program IDs — legacy mainnet deployments (retired; accounts readable) ─────
+// Lookups here are read-only account-existence checks against existing bindings.
 // Do NOT add dark_x402_access_gate or dark_nullifier_record here — those are
-// seized pre-incident IDs awaiting clean redeploy under Squads multisig.
+// seized pre-incident IDs.
 
 export const DARK_SECP256K1_AUTH = "AqwBbV13AoczhoELwP8oxT3nDqB6MsLWXauNzHkssZ9B";
 export const DARK_SECP256R1_VAULT = "3hbbtjeSrTVYXq6eRwjeofDe2DCPh3n8cfN6kZcQfewi";
@@ -29,6 +33,16 @@ export const PROGRAMS = {
   dark_secp256r1_vault: DARK_SECP256R1_VAULT,
   receipt_anchor: RECEIPT_ANCHOR,
 } as const;
+
+/** Current status of each program above — returned alongside every lookup. */
+export const PROGRAM_STATUS = {
+  dark_secp256k1_auth:
+    "retired (mainnet) — existing ETH↔Solana bindings readable; no new bindings can be created",
+  dark_secp256r1_vault:
+    "retired (mainnet) — existing WebAuthn vault accounts readable; no new vaults can be created",
+  receipt_anchor:
+    "retired 2026-07-14 (mainnet) — historical anchors readable; anchoring runs on devnet (CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst)",
+} as const satisfies Record<keyof typeof PROGRAMS, string>;
 
 // Public RPC — never api.mainnet-beta.solana.com (403s with Origin header)
 export const DEFAULT_RPC = "https://solana-rpc.publicnode.com";
@@ -145,7 +159,8 @@ export function buildPassportTools(config: AgentPassportConfig): ToolDef[] {
     description:
       "Return this agent's on-chain identity record: .null name, Solana wallet, " +
       "ETH address, derived PDAs, and whether the binding accounts exist on-chain. " +
-      "Read-only — no signing or transactions.",
+      "Reads existing bindings on the legacy mainnet identity programs (retired; " +
+      "accounts readable). Read-only — no signing or transactions.",
     parameters: {},
     async handler(_params: Record<string, unknown>) {
       const connection = new Connection(rpcUrl, "confirmed");
@@ -173,6 +188,7 @@ export function buildPassportTools(config: AgentPassportConfig): ToolDef[] {
         webauthn_vault_registered: webauthnVaultRegistered,
         network: "solana-mainnet" as const,
         programs: PROGRAMS,
+        program_status: PROGRAM_STATUS,
       };
     },
   };
@@ -182,7 +198,8 @@ export function buildPassportTools(config: AgentPassportConfig): ToolDef[] {
     description:
       "Verify a DIFFERENT agent's on-chain identity. Supply at least one of " +
       "`target_solana_wallet`, `target_eth_address`, or `target_null_name`. " +
-      "Returns whether the corresponding PDAs are registered on-chain. " +
+      "Returns whether the corresponding PDAs are registered on-chain (existing " +
+      "bindings on the retired legacy mainnet identity programs stay readable). " +
       "Read-only — no signing or transactions.",
     parameters: {
       target_solana_wallet: {
@@ -197,7 +214,7 @@ export function buildPassportTools(config: AgentPassportConfig): ToolDef[] {
         type: "string",
         description:
           "Target agent's .null name (e.g. otheragent.null). " +
-          "Informational — not resolved on-chain until null-resolver deployment.",
+          "Informational — passed through; this tool checks identity PDAs, not name resolution.",
       },
     },
     async handler(params: Record<string, unknown>) {
@@ -248,6 +265,7 @@ export function buildPassportTools(config: AgentPassportConfig): ToolDef[] {
         },
         network: "solana-mainnet" as const,
         programs: PROGRAMS,
+        program_status: PROGRAM_STATUS,
       };
     },
   };

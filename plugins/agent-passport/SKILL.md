@@ -17,8 +17,8 @@ ever holding or requesting private keys.
 ## What it does
 
 - Reads `solanaWallet`, `ethAddress`, and `nullName` from plugin config
-- Derives PDAs for the live on-chain identity programs (`dark_secp256k1_auth`,
-  `dark_secp256r1_vault`) and checks whether the accounts exist
+- Derives PDAs on the legacy mainnet identity programs (`dark_secp256k1_auth`,
+  `dark_secp256r1_vault`) and checks whether the binding accounts exist (read-only)
 - Returns the agent's full identity record so it can be injected into conversation
   context, payment routing, or audit trails
 - Can also verify a DIFFERENT agent's identity by their wallet or ETH address
@@ -42,6 +42,11 @@ Returns this agent's on-chain identity record:
     "dark_secp256k1_auth": "AqwBbV13AoczhoELwP8oxT3nDqB6MsLWXauNzHkssZ9B",
     "dark_secp256r1_vault": "3hbbtjeSrTVYXq6eRwjeofDe2DCPh3n8cfN6kZcQfewi",
     "receipt_anchor": "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN"
+  },
+  "program_status": {
+    "dark_secp256k1_auth": "retired (mainnet) — existing ETH↔Solana bindings readable; ...",
+    "dark_secp256r1_vault": "retired (mainnet) — existing WebAuthn vault accounts readable; ...",
+    "receipt_anchor": "retired 2026-07-14 (mainnet) — historical anchors readable; ..."
   }
 }
 ```
@@ -70,8 +75,11 @@ Returns whether the ETH binding and/or Solana wallet PDAs are registered on-chai
 
 ## Current status
 
-ETH↔Solana binding (`dark_secp256k1_auth`) and WebAuthn P-256 vault
-(`dark_secp256r1_vault`) run on Solana mainnet-beta (public beta, not yet audited).
-.null name resolution wiring comes with the null-resolver deployment — `nullName`
-is surfaced from config as-is
-until then.
+The ETH↔Solana binding program (`dark_secp256k1_auth`) and the WebAuthn P-256 vault
+(`dark_secp256r1_vault`) are retired mainnet programs: their accounts stay readable, so
+both tools verify **existing** bindings, but nothing can be invoked and no new bindings
+can be created. This plugin has no write path. Every result carries `program_status`.
+
+`nullName` is surfaced from config as-is. To resolve a legacy `.null` name (read-only —
+the mainnet registrar was retired 2026-08-29, records stay readable), use the
+mcp-server `resolve_null` tool or x402-pay pay-by-name.

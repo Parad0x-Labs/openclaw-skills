@@ -2,8 +2,8 @@
  * Unit tests for the host-free passport core (../dist/passport.js).
  *
  * Hermetic — no live RPC. Covers PDA derivation determinism + correctness,
- * the tool factory (names/params/no-arg guard), the live program IDs, and the
- * public RPC default. Run after `npm run build` (the test script builds first).
+ * the tool factory (names/params/no-arg guard), the legacy program IDs and their
+ * retired status, and the public RPC default. Run after `npm run build` (the test script builds first).
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -15,6 +15,7 @@ import {
   RECEIPT_ANCHOR,
   DEFAULT_RPC,
   PROGRAMS,
+  PROGRAM_STATUS,
   readConfig,
   deriveEthBindingPda,
   deriveSolAgentPda,
@@ -42,7 +43,7 @@ test("default RPC is the approved public node (never api.mainnet-beta)", () => {
   assert.doesNotMatch(DEFAULT_RPC, /api\.mainnet-beta\.solana\.com/);
 });
 
-test("PROGRAMS maps the three live program IDs", () => {
+test("PROGRAMS maps the three legacy mainnet program IDs", () => {
   assert.equal(PROGRAMS.dark_secp256k1_auth, DARK_SECP256K1_AUTH);
   assert.equal(PROGRAMS.dark_secp256r1_vault, DARK_SECP256R1_VAULT);
   assert.equal(PROGRAMS.receipt_anchor, RECEIPT_ANCHOR);
@@ -138,4 +139,34 @@ test("verify_agent_identity exposes the three target params", () => {
     Object.keys(verify.parameters).sort(),
     ["target_eth_address", "target_null_name", "target_solana_wallet"],
   );
+});
+
+// ── retired-program status (read-only plugin) ────────────────────────────────
+
+test("PROGRAM_STATUS marks every listed program retired, keyed like PROGRAMS", () => {
+  assert.deepEqual(Object.keys(PROGRAM_STATUS).sort(), Object.keys(PROGRAMS).sort());
+  for (const [k, v] of Object.entries(PROGRAM_STATUS)) {
+    assert.match(v, /^retired/, `${k} must be reported retired`);
+    assert.match(v, /readable/, `${k} must say its accounts stay readable`);
+  }
+  assert.match(PROGRAM_STATUS.receipt_anchor, /2026-07-14/);
+  assert.match(PROGRAM_STATUS.receipt_anchor, /CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst/);
+});
+
+test("tool descriptions state read-only access to retired programs (no live claims)", () => {
+  for (const t of buildPassportTools(readConfig({}))) {
+    assert.match(t.description, /Read-only/);
+    assert.match(t.description, /retired/);
+    assert.doesNotMatch(t.description, /\blive\b/i);
+  }
+});
+
+test("verify_agent_identity result carries program_status (fake connection, no network)", async () => {
+  // Point at a closed local port: accountExists() swallows the failure → false,
+  // so the handler completes without any external network access.
+  const [, verify] = buildPassportTools(readConfig({ rpcUrl: "http://127.0.0.1:9" }));
+  const res = await verify.handler({ target_solana_wallet: SAMPLE_WALLET });
+  assert.equal(res.ok, true);
+  assert.deepEqual(res.program_status, PROGRAM_STATUS);
+  assert.equal(res.registered.sol_agent, false);
 });
