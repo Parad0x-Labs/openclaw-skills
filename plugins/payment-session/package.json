@@ -1,9 +1,12 @@
 {
   "name": "@parad0x_labs/openclaw-payment-session",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "OpenClaw plugin — streaming + recurring agent billing over x402 (metered pay-as-you-go + subscription), settled in batches, with a per-session budget on suggested settlements. Non-custodial.",
   "type": "module",
   "main": "./src/index.ts",
+  "openclaw": {
+    "extensions": ["./src/index.ts"]
+  },
   "files": ["src/", "openclaw.plugin.json", "SKILL.md", "README.md"],
   "keywords": [
     "openclaw",

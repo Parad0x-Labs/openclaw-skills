@@ -49,6 +49,7 @@ export default defineToolPlugin({
     "Streaming + recurring billing for agents over x402: meter pay-as-you-go usage " +
     "or run a subscription, settle in batches through pay_x402. Per-session budget " +
     "caps suggested and recorded settlements; non-custodial (it never moves money or holds a key).",
+  activation: { onStartup: false },
   tools: (tool) =>
     TOOLS.map((td) =>
       tool({
