@@ -1,6 +1,6 @@
 ---
 name: parad0x-mcp-server
-description: MCP server exposing the Parad0x Labs stack — x402 payment quotes, on-chain receipt anchoring on Solana devnet, read-only .null resolution and Dark Passport lookup, outcome receipts, receipt compression, and program status discovery. Runs over stdio, works with Claude Desktop and any MCP client.
+description: MCP server exposing the Parad0x Labs stack — x402 payment quotes, receipt hashing (on-chain anchoring returns after the receipt_anchor redeploy), read-only .null resolution and Dark Passport lookup, outcome receipts, receipt compression, and program status discovery. Runs over stdio, works with Claude Desktop and any MCP client.
 license: MIT
 metadata:
   author: Parad0x-Labs
@@ -14,7 +14,7 @@ Cursor, Windsurf, and any MCP-compatible agent runtime.
 ## When to use
 
 - Your agent needs to quote, pay, or verify an x402-gated API call.
-- You want to anchor a receipt hash on Solana devnet.
+- You want to compute receipt hashes locally (on-chain anchoring returns after the redeploy).
 - You need to resolve a legacy `.null` name or read an existing Dark Passport binding.
 - You want to compress a batch of receipts or check program addresses and status.
 
@@ -23,7 +23,7 @@ Cursor, Windsurf, and any MCP-compatible agent runtime.
 | Tool | Does |
 |---|---|
 | `x402_get_quote` | Get a payment quote for an x402-gated API endpoint |
-| `anchor_receipt` | Anchor a 32-byte receipt hash on Solana devnet via `receipt_anchor` (`CPQ8Y1bd…`) |
+| `anchor_receipt` | Validate a 32-byte receipt hash; refuses with "receipt anchoring is unavailable until the redeploy under a fresh key" and sends nothing |
 | `lookup_passport` | Read whether an ETH address or Solana wallet has a Dark Passport binding on the legacy mainnet program (retired; existing bindings readable) |
 | `build_outcome_receipt` | Build a signed outcome receipt with PnL, accuracy, or delivery result |
 | `compress_receipts` | Compress a batch of receipts (Liquefy format) |
@@ -32,9 +32,10 @@ Cursor, Windsurf, and any MCP-compatible agent runtime.
 
 ## Deployment status
 
-- **Receipt anchoring runs on devnet** (`CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst`).
-  The mainnet `receipt_anchor` (`6HSRGivd…`) was retired 2026-07-14: `anchor_receipt`
-  refuses mainnet RPCs with a clear error; historical mainnet anchors remain readable.
+- **Receipt anchoring is unavailable until the redeploy under a fresh key.**
+  `anchor_receipt` and `private_compute` anchoring refuse with a clear error and send
+  nothing; hashes are still computed locally. The mainnet `receipt_anchor`
+  (`6HSRGivd…`) was retired 2026-07-14; historical mainnet anchors remain readable.
 - **`.null` resolution is read-only.** The legacy mainnet registrar (`NXgQhepF…`) was
   retired 2026-08-29 — records resolve, registration/updates/transfers are frozen.
 - **Dark Passport lookup is read-only** against the retired mainnet identity program;

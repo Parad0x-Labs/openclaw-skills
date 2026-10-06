@@ -1,27 +1,27 @@
 /**
  * Byte-exact tests for the receipt_anchor encoder (../dist/anchor.js) and the
- * devnet-only cluster guard (mainnet receipt_anchor retired 2026-07-14).
- * Hermetic — no network.
+ * availability gate: receipt anchoring is unavailable until the redeploy under a
+ * fresh key, so no default target exists. Hermetic — no network.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { createHash } from "node:crypto";
+import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 
-import {
+import * as anchor from "../dist/anchor.js";
+
+const {
   buildAnchorIx,
   deriveBucketPda,
   bucketIdForUnix,
   RECEIPT_ANCHOR_VERSION,
   FLAG_HAS_BUCKET_ID,
-  RECEIPT_ANCHOR_DEVNET,
   RECEIPT_ANCHOR_MAINNET_RETIRED,
-  ANCHOR_RPC_DEVNET,
-  GENESIS_HASH,
-  classifyRpcUrl,
-  assertDevnetAnchorCluster,
-} from "../dist/anchor.js";
+  RECEIPT_ANCHOR_UNAVAILABLE_ERROR,
+} = anchor;
 
-const RECEIPT_ANCHOR = "CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst"; // devnet write target
+// Encoder tests run against a throwaway program id — there is no live target.
+const RECEIPT_ANCHOR = Keypair.generate().publicKey.toBase58();
 const RETIRED_MAINNET = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN";
 const PAYER = "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM";
 const HASH = "a".repeat(64);
@@ -73,43 +73,33 @@ test("buildAnchorIx rejects a malformed hash", () => {
   );
 });
 
-// ── deployments + cluster guard ──────────────────────────────────────────────
+// ── availability gate ────────────────────────────────────────────────────────
 
-test("write target is the devnet receipt_anchor; mainnet id is marked retired", () => {
-  assert.equal(RECEIPT_ANCHOR_DEVNET, RECEIPT_ANCHOR);
+test("no receipt_anchor write target is exported; the module names no compromised id", () => {
+  for (const k of Object.keys(anchor)) {
+    assert.doesNotMatch(k, /DEVNET/, `${k} must not exist — there is no devnet target`);
+  }
+  assert.equal(anchor.RECEIPT_ANCHOR_DEVNET, undefined);
+  assert.equal(anchor.ANCHOR_RPC_DEVNET, undefined);
+  // the devnet program that was withdrawn (stored hashed, never named)
+  const withdrawn = "b851c1d6562bf9e70e2033a2db83d21fc5b249eab440a751d5638b285a4596c0";
+  for (const v of Object.values(anchor)) {
+    if (typeof v === "string") {
+      assert.notEqual(createHash("sha256").update(v).digest("hex"), withdrawn);
+    }
+  }
   assert.equal(RECEIPT_ANCHOR_MAINNET_RETIRED, RETIRED_MAINNET);
-  assert.notEqual(RECEIPT_ANCHOR_DEVNET, RECEIPT_ANCHOR_MAINNET_RETIRED);
-  assert.match(ANCHOR_RPC_DEVNET, /devnet/);
+});
+
+test("unavailable error says anchoring waits for the redeploy and nothing is sent", () => {
+  assert.match(RECEIPT_ANCHOR_UNAVAILABLE_ERROR, /receipt anchoring is unavailable until the redeploy under a fresh key/);
+  assert.match(RECEIPT_ANCHOR_UNAVAILABLE_ERROR, /no transaction was sent/);
+  assert.doesNotMatch(RECEIPT_ANCHOR_UNAVAILABLE_ERROR, /devnet/i);
 });
 
 test("buildAnchorIx refuses the retired mainnet program id", () => {
   assert.throws(
     () => buildAnchorIx({ payer: PAYER, receiptHashHex: HASH, programId: RETIRED_MAINNET, bucketId: 1n }),
-    /retired 2026-07-14/,
+    /unavailable until the redeploy under a fresh key/,
   );
-});
-
-test("classifyRpcUrl: mainnet / devnet / testnet / unknown", () => {
-  for (const u of [
-    "https://solana-rpc.publicnode.com",
-    "https://solana.publicnode.com",
-    "https://solana.api.onfinality.io/public",
-    "https://api.mainnet-beta.solana.com",
-    "https://mainnet.helius-rpc.com/?api-key=x",
-  ]) {
-    assert.equal(classifyRpcUrl(u), "mainnet", u);
-  }
-  assert.equal(classifyRpcUrl("https://api.devnet.solana.com"), "devnet");
-  assert.equal(classifyRpcUrl("https://devnet.helius-rpc.com/?api-key=x"), "devnet");
-  assert.equal(classifyRpcUrl("https://api.testnet.solana.com"), "testnet");
-  assert.equal(classifyRpcUrl("http://127.0.0.1:8899"), "unknown");
-  assert.equal(classifyRpcUrl("not a url"), "unknown");
-});
-
-test("assertDevnetAnchorCluster: devnet passes, mainnet gets the retired error, others refused", () => {
-  assert.doesNotThrow(() => assertDevnetAnchorCluster(GENESIS_HASH.devnet));
-  assert.throws(() => assertDevnetAnchorCluster(GENESIS_HASH.mainnet), /retired 2026-07-14/);
-  assert.throws(() => assertDevnetAnchorCluster(GENESIS_HASH.mainnet), /CPQ8Y1bd/);
-  assert.throws(() => assertDevnetAnchorCluster(GENESIS_HASH.testnet), /not devnet/);
-  assert.throws(() => assertDevnetAnchorCluster("someLocalValidatorGenesis"), /not devnet/);
 });

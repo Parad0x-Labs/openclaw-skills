@@ -16,7 +16,7 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { createHash } from "crypto";
 
 /** Legacy mainnet .null registrar (retired 2026-08-29; records readable,
- *  registration/updates/transfers frozen). NEVER the seized pre-incident H4wbFJ…. */
+ *  registration/updates/transfers frozen). NEVER the seized pre-incident registrar. */
 export const NULL_REGISTRAR_MAINNET = "NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np";
 
 /** Keyless public-node mainnet RPC for resolution reads. */

@@ -1,11 +1,17 @@
 /**
- * receipt_anchor instruction encoder + cluster guard (host-free, byte-exact,
+ * receipt_anchor instruction encoder + availability gate (host-free, byte-exact,
  * unit-tested).
  *
- * Deployments:
- *   - devnet  CPQ8Y1bd… — the write target. anchor_receipt submits here only.
- *   - mainnet 6HSRGivd… — RETIRED 2026-07-14. It cannot be invoked; the
- *     historical anchors it stored (June–July 2026) remain readable on-chain.
+ * Availability: there is currently NO usable receipt_anchor deployment on any
+ * network. The mainnet program (6HSRGivd…) was retired 2026-07-14 — its
+ * historical anchors (June–July 2026) remain readable on-chain — and the devnet
+ * deployment was withdrawn. Receipt anchoring is unavailable until the program
+ * is redeployed under a fresh key: anchor_receipt and private_compute refuse
+ * with RECEIPT_ANCHOR_UNAVAILABLE_ERROR and send nothing. Receipt hashes and
+ * commitments are still computed locally.
+ *
+ * The encoder below stays so the client is ready for the redeploy. It takes the
+ * program id as an explicit argument and has no default target.
  *
  * Instruction ABI (receipt_anchor):
  *   data = [0x01 version][flags][32-byte hash]( [u64 LE bucket_id] )
@@ -21,66 +27,15 @@
 
 import { PublicKey, TransactionInstruction, SystemProgram } from "@solana/web3.js";
 
-/** receipt_anchor on devnet — the only cluster anchor_receipt writes to. */
-export const RECEIPT_ANCHOR_DEVNET = "CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst";
 /** receipt_anchor on mainnet — retired 2026-07-14; historical anchors readable. */
 export const RECEIPT_ANCHOR_MAINNET_RETIRED = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN";
 export const RECEIPT_ANCHOR_MAINNET_RETIRED_ON = "2026-07-14";
-/** Default RPC for anchoring (devnet). */
-export const ANCHOR_RPC_DEVNET = "https://api.devnet.solana.com";
 
-/** Cluster genesis hashes — the authoritative way to tell which cluster an RPC serves. */
-export const GENESIS_HASH = {
-  mainnet: "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
-  devnet: "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
-  testnet: "4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY",
-} as const;
-
-export const MAINNET_ANCHOR_RETIRED_ERROR =
-  `receipt_anchor on Solana mainnet (${RECEIPT_ANCHOR_MAINNET_RETIRED}) was retired ` +
-  `${RECEIPT_ANCHOR_MAINNET_RETIRED_ON} and cannot be invoked — no mainnet anchor transaction is sent. ` +
-  `Anchoring runs on devnet (${RECEIPT_ANCHOR_DEVNET}); omit rpc_url or pass a devnet RPC ` +
-  `(default ${ANCHOR_RPC_DEVNET}). Historical mainnet anchors remain readable.`;
-
-/** Hosts that serve Solana mainnet without saying "mainnet" in the URL. */
-const KNOWN_MAINNET_HOSTS = new Set<string>([
-  "solana-rpc.publicnode.com",
-  "solana.publicnode.com",
-  "solana.api.onfinality.io",
-]);
-
-/**
- * Best-effort cluster guess from an RPC URL (no network). "unknown" is resolved
- * authoritatively by the genesis-hash check before anything is submitted.
- */
-export function classifyRpcUrl(url: string): "mainnet" | "devnet" | "testnet" | "unknown" {
-  let host = "";
-  let full = url.toLowerCase();
-  try {
-    const u = new URL(url);
-    host = u.hostname.toLowerCase();
-    full = `${host}${u.pathname.toLowerCase()}`;
-  } catch {
-    /* not a URL — fall back to substring checks on the raw string */
-  }
-  if (full.includes("devnet")) return "devnet";
-  if (full.includes("testnet")) return "testnet";
-  if (full.includes("mainnet") || KNOWN_MAINNET_HOSTS.has(host)) return "mainnet";
-  return "unknown";
-}
-
-/**
- * Authoritative pre-submit guard: throws unless the RPC's genesis hash is devnet.
- * A mainnet genesis gets the explicit "retired 2026-07-14" error.
- */
-export function assertDevnetAnchorCluster(genesisHash: string): void {
-  if (genesisHash === GENESIS_HASH.devnet) return;
-  if (genesisHash === GENESIS_HASH.mainnet) throw new Error(MAINNET_ANCHOR_RETIRED_ERROR);
-  throw new Error(
-    `anchor_receipt submits only to Solana devnet (${RECEIPT_ANCHOR_DEVNET}); ` +
-      `this RPC reports genesis hash ${genesisHash}, which is not devnet. No transaction was sent.`,
-  );
-}
+/** Returned (and thrown) whenever anchoring is requested. Nothing is signed or sent. */
+export const RECEIPT_ANCHOR_UNAVAILABLE_ERROR =
+  "receipt anchoring is unavailable until the redeploy under a fresh key — no transaction was sent. " +
+  `The mainnet receipt_anchor (${RECEIPT_ANCHOR_MAINNET_RETIRED}) was retired ${RECEIPT_ANCHOR_MAINNET_RETIRED_ON}; ` +
+  "its historical anchors remain readable. The receipt hash is still computed locally.";
 
 export const RECEIPT_ANCHOR_VERSION = 0x01;
 export const FLAG_HAS_BUCKET_ID = 0x01;
@@ -108,8 +63,9 @@ export function deriveBucketPda(bucketId: bigint, programId: string): PublicKey 
 }
 
 /**
- * Build the single-anchor instruction (42-byte pinned-bucket form). Refuses the
- * retired mainnet program id — an instruction for it could never execute.
+ * Build the single-anchor instruction (42-byte pinned-bucket form) for an
+ * explicit program id. Refuses the retired mainnet program id — an instruction
+ * for it could never execute.
  */
 export function buildAnchorIx(opts: {
   payer: string;
@@ -121,7 +77,7 @@ export function buildAnchorIx(opts: {
     throw new Error("receipt_hash_hex must be exactly 64 hex characters (32 bytes).");
   }
   if (opts.programId === RECEIPT_ANCHOR_MAINNET_RETIRED) {
-    throw new Error(MAINNET_ANCHOR_RETIRED_ERROR);
+    throw new Error(RECEIPT_ANCHOR_UNAVAILABLE_ERROR);
   }
   const data = Buffer.concat([
     Buffer.from([RECEIPT_ANCHOR_VERSION, FLAG_HAS_BUCKET_ID]),

@@ -7,10 +7,11 @@
  * A throwaway keypair is injected so the write path reaches the canSubmitWrite
  * guard (rather than the no-keypair dry-run branch) — proving the guard blocks.
  *
- * Also proves anchor_receipt never targets the retired mainnet receipt_anchor:
- * previews name the devnet program, a mainnet RPC URL is refused up front, and
- * an RPC that reports the mainnet genesis hash is refused before anything is
- * signed or sent (checked against a local fake JSON-RPC server — no network).
+ * Also proves receipt anchoring refuses cleanly: anchor_receipt and
+ * private_compute return "unavailable until the redeploy under a fresh key",
+ * even with writes enabled and a keypair present, and never contact an RPC
+ * (checked against a local fake JSON-RPC server — no network). check_nullifier
+ * refuses the same way, and get_stack_status lists no seized program.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -21,11 +22,11 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { createServer } from "node:http";
 import { Keypair } from "@solana/web3.js";
+import { isSeizedProgram } from "../dist/scope.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const DEVNET_ANCHOR = "CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst";
 const RETIRED_MAINNET_ANCHOR = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN";
-const MAINNET_GENESIS = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d";
+const UNAVAILABLE = /receipt anchoring is unavailable until the redeploy under a fresh key/;
 const serverPath = join(here, "..", "dist", "index.js");
 
 /** Minimal newline-delimited JSON-RPC client over a child process's stdio. */
@@ -115,44 +116,55 @@ test("server boots, lists consent tools, gates writes (read-only scope)", async 
     const scope = toolResult(await request("tools/call", { name: "get_scope_status", arguments: {} }));
     assert.equal(scope.write_mode_enabled, false);
 
-    // anchor_receipt with a valid hash but no ALLOW_WRITE → preview, no tx.
+    // anchor_receipt with a valid hash → clear refusal, hash echoed, no tx, no preview.
     const anchor = toolResult(
       await request("tools/call", {
         name: "anchor_receipt",
-        arguments: { receipt_hash_hex: "a".repeat(64), confirm: true },
+        arguments: { receipt_hash_hex: "A".repeat(64), confirm: true },
       }),
     );
-    assert.equal(anchor.preview, true, "write must be blocked to a preview");
-    assert.match(anchor.blocked_reason, /PARAD0X_MCP_ALLOW_WRITE=1/);
-    assert.ok(!anchor.solana_tx, "no transaction signature should be returned");
-    // the preview targets the devnet receipt_anchor, never the retired mainnet one
-    assert.equal(anchor.would_submit.program, DEVNET_ANCHOR);
-    assert.equal(anchor.would_submit.cluster, "devnet");
+    assert.match(anchor.error, UNAVAILABLE);
+    assert.equal(anchor.anchoring, "unavailable");
+    assert.equal(anchor.sent, false);
+    assert.equal(anchor.receipt_hash_hex, "a".repeat(64));
+    assert.ok(!anchor.solana_tx && !anchor.preview && !anchor.would_submit);
 
-    // anchor_receipt against a mainnet RPC → explicit "retired" refusal, no preview, no tx.
-    const mainnetAnchor = toolResult(
-      await request("tools/call", {
-        name: "anchor_receipt",
-        arguments: { receipt_hash_hex: "a".repeat(64), rpc_url: "https://solana-rpc.publicnode.com", confirm: true },
-      }),
+    // malformed hash is still rejected on its own terms
+    const bad = toolResult(
+      await request("tools/call", { name: "anchor_receipt", arguments: { receipt_hash_hex: "abcd" } }),
     );
-    assert.match(mainnetAnchor.error, /retired 2026-07-14/);
-    assert.equal(mainnetAnchor.retired, true);
-    assert.equal(mainnetAnchor.mainnet_program, RETIRED_MAINNET_ANCHOR);
-    assert.equal(mainnetAnchor.devnet_program, DEVNET_ANCHOR);
-    assert.ok(!mainnetAnchor.preview && !mainnetAnchor.solana_tx);
+    assert.match(bad.error, /64 hex/);
 
-    // get_stack_status: devnet anchor is the live target; retired mainnet programs say so.
+    // check_nullifier → clear refusal, no lookup
+    const nul = toolResult(
+      await request("tools/call", { name: "check_nullifier", arguments: { nullifier: "1".repeat(64) } }),
+    );
+    assert.match(nul.error, /unavailable until the nullifier record program is redeployed under a fresh key/);
+    assert.equal(nul.available, false);
+    assert.ok(!("spent" in nul) && !("record_pda" in nul));
+
+    // tool descriptions advertise no devnet anchor target
+    const anchorTool = list.result.tools.find((t) => t.name === "anchor_receipt");
+    assert.match(anchorTool.description, new RegExp(UNAVAILABLE.source, "i"));
+    assert.doesNotMatch(anchorTool.description, /devnet/i);
+    assert.equal(anchorTool.inputSchema.properties.rpc_url, undefined);
+
+    // get_stack_status: no live anchor, no seized address, retired mainnet programs say so.
     const stack = toolResult(await request("tools/call", { name: "get_stack_status", arguments: {} }));
     const byAddr = Object.fromEntries(stack.programs.map((p) => [p.address, p]));
-    assert.equal(byAddr[DEVNET_ANCHOR].cluster, "devnet");
     assert.match(byAddr[RETIRED_MAINNET_ANCHOR].status, /^retired 2026-07-14/);
     for (const p of stack.programs) {
+      assert.equal(isSeizedProgram(p.address), false, `${p.name} must not be a seized program`);
+      assert.notEqual(p.cluster, "devnet", `${p.name}: no devnet program is listed`);
       if (p.cluster === "mainnet" && p.name !== "null_token") {
         assert.match(p.status, /retired/, `${p.name} must not be reported live`);
       }
     }
-    assert.doesNotMatch(JSON.stringify(stack), /rolling\s+out|clean redeploy pending/);
+    assert.equal(stack.receipt_anchoring.status, "unavailable");
+    assert.equal(stack.shielded_access.status, "unavailable");
+    assert.equal(stack.private_reputation_stack.status, "unavailable");
+    assert.equal(stack.anchor_network, "none");
+    assert.doesNotMatch(JSON.stringify(stack), /rolling\s+out|clean redeploy pending|ZK-verified on devnet/);
 
     // create_wallet: preview writes nothing; confirm writes a key file + returns
     // ONLY the public key (the secret must never appear in the tool result).
@@ -211,9 +223,13 @@ async function startFakeRpc(genesisHash) {
   return { url: `http://127.0.0.1:${srv.address().port}`, methods, close: () => srv.close() };
 }
 
-test("anchor_receipt with writes enabled refuses an RPC reporting the mainnet genesis (nothing sent)", async () => {
-  const rpc = await startFakeRpc(MAINNET_GENESIS);
-  const { child, request, notify } = startServer({ PARAD0X_MCP_ALLOW_WRITE: "1" });
+test("with writes enabled and a keypair, anchoring still refuses and no RPC is contacted", async () => {
+  const rpc = await startFakeRpc("unused");
+  const { child, request, notify } = startServer({
+    PARAD0X_MCP_ALLOW_WRITE: "1",
+    PARAD0X_ANCHOR_RPC_URL: rpc.url,
+    SOLANA_RPC_URL: rpc.url,
+  });
   try {
     await request("initialize", {
       protocolVersion: "2024-11-05",
@@ -224,18 +240,35 @@ test("anchor_receipt with writes enabled refuses an RPC reporting the mainnet ge
 
     const scope = toolResult(await request("tools/call", { name: "get_scope_status", arguments: {} }));
     assert.equal(scope.write_mode_enabled, true);
+    const granted = toolResult(
+      await request("tools/call", { name: "grant_write_consent", arguments: { tool_name: "anchor_receipt" } }),
+    );
+    assert.equal(granted.granted, true);
 
-    // The URL does not name a cluster, so only the genesis-hash check can catch it.
     const r = toolResult(
       await request("tools/call", {
         name: "anchor_receipt",
         arguments: { receipt_hash_hex: "b".repeat(64), rpc_url: rpc.url, confirm: true },
       }),
     );
-    assert.match(r.error, /retired 2026-07-14/);
-    assert.equal(r.cluster_check, "failed");
+    assert.match(r.error, UNAVAILABLE);
+    assert.equal(r.sent, false);
     assert.ok(!r.solana_tx, "no transaction signature should be returned");
-    assert.deepEqual(rpc.methods, ["getGenesisHash"], "only the genesis hash may be queried");
+
+    // private_compute with anchor:true: commitment computed locally, anchor refused.
+    // The executor URL is a closed local port, so nothing leaves the machine.
+    const pc = toolResult(
+      await request("tools/call", {
+        name: "private_compute",
+        arguments: { plaintext_input: "hello", executor_endpoint: "http://127.0.0.1:9/run", anchor: true },
+      }),
+    );
+    assert.match(pc.commitment.commitment_hex, /^[0-9a-f]{64}$/);
+    assert.equal(pc.commitment.anchored, false);
+    assert.match(pc.commitment.error, UNAVAILABLE);
+    assert.equal(pc.commitment_tx, undefined);
+
+    assert.deepEqual(rpc.methods, [], "no RPC method may be called");
   } finally {
     child.kill();
     rpc.close();

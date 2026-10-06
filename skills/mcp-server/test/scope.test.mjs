@@ -7,11 +7,14 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
+import { Keypair } from "@solana/web3.js";
 
 import {
   WRITE_TOOLS,
   READ_TOOLS,
   SEIZED_PROGRAMS,
+  COMPROMISED_PROGRAM_SHA256,
+  isSeizedProgram,
   assertNotSeized,
   canSubmitWrite,
 } from "../dist/scope.js";
@@ -47,22 +50,33 @@ test("canSubmitWrite: allowWrite but neither confirm nor consent → blocked", (
 
 // ── seized-program guard ─────────────────────────────────────────────────────
 
-test("assertNotSeized: throws on both seized pre-incident IDs", () => {
+test("assertNotSeized: throws on every listed seized ID", () => {
   for (const id of SEIZED_PROGRAMS) {
     assert.throws(() => assertNotSeized(id, "test_program"), /SEIZED/);
   }
 });
 
 test("assertNotSeized: passes for a non-seized program ID", () => {
-  // receipt_anchor on devnet (the anchor_receipt write target) must not be flagged.
+  // Dark NULL canonical devnet program (clean authority) must not be flagged.
   assert.doesNotThrow(() =>
-    assertNotSeized("CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst", "receipt_anchor"),
+    assertNotSeized("35GMe13ExGB1JGp1wZGrEvHfQnENKADroDQApeziKuwV", "dark_null"),
   );
+  assert.doesNotThrow(() => assertNotSeized(Keypair.generate().publicKey.toBase58(), "random"));
 });
 
-test("the two known seized IDs are registered", () => {
+test("the seized pre-incident ID is registered", () => {
   assert.ok(SEIZED_PROGRAMS.has("EepqzVBNuzCgD6XGiB19pDDhzFG3gUL4z1nabBYxpfjS"));
-  assert.ok(SEIZED_PROGRAMS.has("24tmjEd1DhPW2QuPV6BzkFFHrq2PtELoLqv5cuv2Xu65"));
+});
+
+test("compromised program IDs are held as 38 SHA-256 digests, never as plain IDs", () => {
+  assert.equal(COMPROMISED_PROGRAM_SHA256.size, 38);
+  for (const h of COMPROMISED_PROGRAM_SHA256) assert.match(h, /^[0-9a-f]{64}$/);
+});
+
+test("isSeizedProgram matches by digest (plain-text IDs are not stored)", () => {
+  // A digest in the set is matched only via its preimage; an unrelated key is not.
+  assert.equal(isSeizedProgram(Keypair.generate().publicKey.toBase58()), false);
+  assert.equal(isSeizedProgram("EepqzVBNuzCgD6XGiB19pDDhzFG3gUL4z1nabBYxpfjS"), true);
 });
 
 // ── tool-set membership ──────────────────────────────────────────────────────

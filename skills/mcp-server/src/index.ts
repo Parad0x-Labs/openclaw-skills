@@ -7,25 +7,13 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { createHash, createHmac, randomBytes, createCipheriv, createSecretKey } from "crypto";
 import { deflateSync } from "zlib";
-import { Connection, PublicKey, Keypair, Transaction, TransactionInstruction } from "@solana/web3.js";
-import {
-  WRITE_TOOLS,
-  READ_TOOLS,
-  assertNotSeized,
-  canSubmitWrite,
-} from "./scope.js";
+import { Connection, PublicKey } from "@solana/web3.js";
+import { WRITE_TOOLS, READ_TOOLS } from "./scope.js";
 import { resolveNullName, NULL_REGISTRAR_MAINNET } from "./resolve.js";
 import {
-  buildAnchorIx,
-  deriveBucketPda,
-  bucketIdForUnix,
-  classifyRpcUrl,
-  assertDevnetAnchorCluster,
-  RECEIPT_ANCHOR_DEVNET,
   RECEIPT_ANCHOR_MAINNET_RETIRED,
   RECEIPT_ANCHOR_MAINNET_RETIRED_ON,
-  ANCHOR_RPC_DEVNET,
-  MAINNET_ANCHOR_RETIRED_ERROR,
+  RECEIPT_ANCHOR_UNAVAILABLE_ERROR,
 } from "./anchor.js";
 import { generateWallet, resolveWalletPath } from "./wallet.js";
 import { writeFileSync, existsSync, mkdirSync, chmodSync } from "fs";
@@ -36,26 +24,20 @@ import { dirname } from "path";
 // ---------------------------------------------------------------------------
 
 // Current deployments:
-//   - receipt_anchor runs on devnet (CPQ8Y1bd…) — anchor_receipt writes there only.
-//     The mainnet receipt_anchor (6HSRGivd…) was retired 2026-07-14; its historical
-//     anchors stay readable, but it cannot be invoked.
+//   - receipt_anchor: there is no usable deployment on any network. The mainnet
+//     program (6HSRGivd…) was retired 2026-07-14 — its historical anchors stay
+//     readable — and the devnet deployment was withdrawn. anchor_receipt and
+//     private_compute anchoring refuse until the redeploy under a fresh key.
 //   - The gen-2 mainnet programs (passport/identity, semaphore, nullifier, proof gates,
 //     dark_secp256r1_vault, …) are retired: program-owned accounts stay readable,
 //     nothing can be invoked. Tools that touch them are read-only.
-//   - The ZK stack (Dark NULL, reputation gate, commitment tree) is on devnet.
-// WARNING: dark_x402_access_gate and dark_nullifier_record are SEIZED pre-incident IDs —
-// deployer key F6Fr… stolen 2026-06-14; attacker holds upgrade authority. Do not call them.
+//   - The shielded access gate, nullifier record, reputation gate and commitment
+//     tree deployments were withdrawn; check_nullifier refuses until the redeploy.
+// WARNING: dark_x402_access_gate is a SEIZED pre-incident ID — deployer key F6Fr…
+// stolen 2026-06-14; attacker holds upgrade authority. Do not call it.
 const PROGRAMS = {
   // SEIZED — pre-incident; attacker holds upgrade authority. Never called.
   dark_x402_access_gate: "EepqzVBNuzCgD6XGiB19pDDhzFG3gUL4z1nabBYxpfjS",
-  // SEIZED — pre-incident; attacker holds upgrade authority. Never called.
-  dark_nullifier_record: "24tmjEd1DhPW2QuPV6BzkFFHrq2PtELoLqv5cuv2Xu65",
-  // devnet
-  dark_reputation_gate: "9nN7UTTT5hgKnc2LZTqr3qaLLSt5PxWUrDbpUTGYHRxp",
-  // devnet
-  receipt_commitment_tree: "8jC8QGiDJRRxhbPXMX5wJnGUq89xJZ2LsHMdbn2urCas",
-  // devnet — the anchor_receipt write target
-  receipt_anchor: RECEIPT_ANCHOR_DEVNET,
   // mainnet, retired 2026-07-14 — historical anchors readable, cannot be invoked
   receipt_anchor_mainnet_retired: RECEIPT_ANCHOR_MAINNET_RETIRED,
   // mainnet, retired — accounts readable, cannot be invoked
@@ -70,21 +52,15 @@ const PROGRAMS = {
   dark_bn254_gate: "GCptvBYF8S6eVYoh15B7WAESc54FUHCpN1Ui6aHeQYZd",
 } as const;
 
-// Devnet-only addresses that differ from mainnet (the access gate has a separate devnet id;
-// reputation gate, tree, and nullifier share the same id on both clusters).
-const DEVNET_PROGRAMS = {
-  dark_x402_access_gate: "7LZzJnLSCCu2enc7mXz9FFCbomotME78xFG4eqkpo5U6",
-} as const;
+/** Returned by check_nullifier: the nullifier record deployment was withdrawn. */
+const NULLIFIER_UNAVAILABLE_ERROR =
+  "check_nullifier is unavailable until the nullifier record program is redeployed under a fresh key — no lookup was made.";
 
 const EXPLORER_BASE = "https://explorer.solana.com";
 const DEFAULT_RPC = "https://solana-rpc.publicnode.com";
 
-function explorerTx(sig: string, cluster?: "devnet"): string {
-  return `${EXPLORER_BASE}/tx/${sig}${cluster ? `?cluster=${cluster}` : ""}`;
-}
-
-function explorerAccount(addr: string, cluster?: "devnet"): string {
-  return `${EXPLORER_BASE}/address/${addr}${cluster ? `?cluster=${cluster}` : ""}`;
+function explorerAccount(addr: string): string {
+  return `${EXPLORER_BASE}/address/${addr}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -116,17 +92,6 @@ function buildMerkleRoot(items: object[]): string {
     layer = next;
   }
   return Buffer.from(layer[0] as Uint8Array).toString("hex");
-}
-
-function loadKeypair(): Keypair | null {
-  const raw = process.env.SOLANA_KEYPAIR;
-  if (!raw) return null;
-  try {
-    const bytes = JSON.parse(raw) as number[];
-    return Keypair.fromSecretKey(Uint8Array.from(bytes));
-  } catch {
-    return null;
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -249,117 +214,22 @@ async function x402GetQuote(
   }
 }
 
-async function anchorReceipt(
-  receiptHashHex: string,
-  rpcUrl = ANCHOR_RPC_DEVNET,
-  confirm = false,
-  consented = false
-): Promise<object> {
+/**
+ * receipt_anchor has no usable deployment, so this never signs or sends. It
+ * validates the hash and returns a clear refusal that echoes it back.
+ */
+function anchorReceipt(receiptHashHex: string): object {
   if (!/^[0-9a-fA-F]{64}$/.test(receiptHashHex)) {
     return { error: "receipt_hash_hex must be exactly 64 hex characters (32 bytes)" };
   }
-
-  // The mainnet receipt_anchor is retired (2026-07-14) — refuse a mainnet RPC up
-  // front, before any keypair handling, preview, or network call. RPC URLs that
-  // don't name their cluster are checked authoritatively by genesis hash below.
-  if (classifyRpcUrl(rpcUrl) === "mainnet") {
-    return {
-      error: MAINNET_ANCHOR_RETIRED_ERROR,
-      retired: true,
-      mainnet_program: RECEIPT_ANCHOR_MAINNET_RETIRED,
-      mainnet_retired_on: RECEIPT_ANCHOR_MAINNET_RETIRED_ON,
-      devnet_program: RECEIPT_ANCHOR_DEVNET,
-      devnet_rpc: ANCHOR_RPC_DEVNET,
-    };
-  }
-
-  const keypair = loadKeypair();
-
-  if (!keypair) {
-    // Dry-run mode — return a mock response so agents can see the output format
-    const mockSig = Buffer.from(randomBytes(64)).toString("base64url").slice(0, 88);
-    return {
-      solana_tx: mockSig,
-      explorer_url: explorerTx(mockSig, "devnet"),
-      slot: 0,
-      cluster: "devnet",
-      program: RECEIPT_ANCHOR_DEVNET,
-      dry_run: true,
-      note: "SOLANA_KEYPAIR env var not set. Set it to a JSON array of 64 bytes to submit real devnet transactions. This is a dry-run response showing the output format.",
-    };
-  }
-
-  // Zero-trust write-guard: a key is present, but do NOT submit unless the
-  // operator enabled writes on THIS machine AND the call is authorized — either
-  // by a per-call confirm:true or a prior session consent (grant_write_consent).
-  // Pin the hourly bucket client-side so the derived bucket PDA always matches
-  // the one the program writes (the no-bucket form risks an hour-boundary drift).
-  const bucketId = bucketIdForUnix(Math.floor(Date.now() / 1000));
-
-  const decision = canSubmitWrite({ allowWrite: ALLOW_WRITE, confirm, consented });
-  if (!decision.allowed) {
-    return {
-      preview: true,
-      would_submit: {
-        cluster: "devnet",
-        program: RECEIPT_ANCHOR_DEVNET,
-        instruction: "anchor v1 (version 0x01, pinned hourly bucket)",
-        receipt_hash_hex: receiptHashHex,
-        fee_payer: keypair.publicKey.toBase58(),
-        bucket_id: bucketId.toString(),
-        bucket_pda: deriveBucketPda(bucketId, RECEIPT_ANCHOR_DEVNET).toBase58(),
-      },
-      blocked_reason: decision.blockedReason,
-      note: "No transaction was sent. This is a preview of exactly what WOULD be submitted (devnet; the RPC's genesis hash is checked before sending).",
-    };
-  }
-
-  try {
-    const connection = new Connection(rpcUrl, "confirmed");
-
-    // Authoritative cluster check: only a devnet genesis hash may proceed. A
-    // mainnet RPC gets the "retired 2026-07-14" refusal; nothing is signed or sent.
-    try {
-      assertDevnetAnchorCluster(await connection.getGenesisHash());
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      return { error: msg, cluster_check: "failed", devnet_program: RECEIPT_ANCHOR_DEVNET };
-    }
-
-    // receipt_anchor single-anchor, 42-byte pinned-bucket form:
-    // data [0x01][0x01][32B hash][u64 LE bucket_id]; keys payer + bucket PDA + system.
-    const ix = buildAnchorIx({
-      payer: keypair.publicKey.toBase58(),
-      receiptHashHex,
-      programId: RECEIPT_ANCHOR_DEVNET,
-      bucketId,
-    });
-
-    const tx = new Transaction().add(ix);
-    const { blockhash } = await connection.getLatestBlockhash();
-    tx.recentBlockhash = blockhash;
-    tx.feePayer = keypair.publicKey;
-    tx.sign(keypair);
-
-    const sig = await connection.sendRawTransaction(tx.serialize(), {
-      skipPreflight: false,
-    });
-
-    const conf = await connection.confirmTransaction(sig, "confirmed");
-    const slot = conf.context.slot;
-
-    return {
-      solana_tx: sig,
-      explorer_url: explorerTx(sig, "devnet"),
-      slot,
-      cluster: "devnet",
-      program: RECEIPT_ANCHOR_DEVNET,
-      dry_run: false,
-    };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { error: `Solana transaction failed: ${msg}` };
-  }
+  return {
+    error: RECEIPT_ANCHOR_UNAVAILABLE_ERROR,
+    anchoring: "unavailable",
+    sent: false,
+    receipt_hash_hex: receiptHashHex.toLowerCase(),
+    mainnet_program_retired: RECEIPT_ANCHOR_MAINNET_RETIRED,
+    mainnet_retired_on: RECEIPT_ANCHOR_MAINNET_RETIRED_ON,
+  };
 }
 
 async function lookupPassport(
@@ -429,12 +299,8 @@ async function lookupPassport(
   };
 }
 
-async function checkNullifier(
-  nullifier: string,
-  rpcUrl = DEFAULT_RPC
-): Promise<object> {
-  assertNotSeized(PROGRAMS.dark_nullifier_record, "dark_nullifier_record");
-  // Accept a 64-char hex string OR a decimal BN254 field element.
+/** The nullifier record deployment was withdrawn: validate the input, refuse the lookup. */
+function checkNullifier(nullifier: string): object {
   const s = nullifier.trim();
   let hex: string;
   if (/^[0-9a-fA-F]{64}$/.test(s)) {
@@ -445,32 +311,7 @@ async function checkNullifier(
   } else {
     return { error: "nullifier must be a 64-char hex string or a decimal field element" };
   }
-
-  try {
-    const nullifierBytes = Buffer.from(hex, "hex");
-    const program = new PublicKey(PROGRAMS.dark_nullifier_record);
-    // Single-use record PDA — matches the on-chain seed [b"null_record", nullifier_be_32].
-    const [recordPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("null_record"), nullifierBytes],
-      program
-    );
-    const connection = new Connection(rpcUrl, "confirmed");
-    const info = await connection.getAccountInfo(recordPda);
-    const spent = info !== null && info.data.length > 0;
-    return {
-      nullifier_hex: hex,
-      record_pda: recordPda.toBase58(),
-      spent,
-      program: PROGRAMS.dark_nullifier_record,
-      explorer_url: explorerAccount(recordPda.toBase58()),
-      note: spent
-        ? "Nullifier already recorded on-chain — this proof has been spent (single-use exhausted)."
-        : "No record found — this nullifier has not been used yet.",
-    };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { error: `Nullifier lookup failed: ${msg}` };
-  }
+  return { error: NULLIFIER_UNAVAILABLE_ERROR, available: false, nullifier_hex: hex };
 }
 
 function buildOutcomeReceipt(params: {
@@ -547,10 +388,8 @@ async function privateCompute(params: {
   executor_endpoint: string;
   encryption_key_hex?: string;
   anchor?: boolean;
-  rpc_url?: string;
-  consented?: boolean;
 }): Promise<object> {
-  const { plaintext_input, executor_endpoint, encryption_key_hex, anchor, rpc_url, consented } = params;
+  const { plaintext_input, executor_endpoint, encryption_key_hex, anchor } = params;
 
   // Step 1: Generate or use provided 32-byte AES-256 key
   let rawKeyBytes: Uint8Array;
@@ -602,9 +441,9 @@ async function privateCompute(params: {
   // Step 5: result_hash = sha256(JSON.stringify(executorResponse))
   const resultHash = sha256hex(JSON.stringify(executorResponse));
 
-  // Step 6: Optionally anchor (input_hash + result_hash) on Solana
-  let commitmentTx: string | undefined;
-  let explorerUrl: string | undefined;
+  // Step 6: Commitment over (input_hash, result_hash). Computed locally; the
+  // on-chain anchor is refused — receipt_anchor has no usable deployment.
+  let commitment: Record<string, unknown> | undefined;
 
   if (anchor) {
     // Commitment = sha256(input_hash_bytes + result_hash_bytes)
@@ -612,20 +451,11 @@ async function privateCompute(params: {
     const rhBuf = Buffer.from(resultHash, "hex") as unknown as Uint8Array;
     const combined = Buffer.concat([ihBuf, rhBuf]) as unknown as Uint8Array;
     const commitmentHex = createHash("sha256").update(combined).digest("hex");
-
-    const anchorResult = await anchorReceipt(
-      commitmentHex,
-      rpc_url ?? process.env.PARAD0X_ANCHOR_RPC_URL ?? ANCHOR_RPC_DEVNET,
-      false,
-      consented === true
-    ) as Record<string, unknown>;
-
-    if (anchorResult.solana_tx) {
-      commitmentTx = anchorResult.solana_tx as string;
-      explorerUrl = anchorResult.explorer_url as string;
-    } else if (anchorResult.error) {
-      commitmentTx = `anchor_failed: ${anchorResult.error}`;
-    }
+    commitment = {
+      commitment_hex: commitmentHex,
+      anchored: false,
+      error: RECEIPT_ANCHOR_UNAVAILABLE_ERROR,
+    };
   }
 
   // Step 7: Return all fields
@@ -638,27 +468,17 @@ async function privateCompute(params: {
     protocol_note: "executor received ciphertext only — plaintext never left client",
   };
 
-  if (commitmentTx !== undefined) output.commitment_tx = commitmentTx;
-  if (explorerUrl !== undefined) output.explorer_url = explorerUrl;
+  if (commitment !== undefined) output.commitment = commitment;
 
   return output;
 }
 
 function getStackStatus(): object {
-  // The pre-incident mainnet IDs for dark_x402_access_gate + dark_nullifier_record
-  // are seized (hostile upgrade authority) and are NOT listed here. Never
-  // advertise a seized address as live.
+  // Seized or withdrawn program IDs are NOT listed here. Never advertise a
+  // seized address as live.
   const retired = "retired (mainnet) — accounts readable, cannot be invoked";
   return {
     programs: [
-      {
-        name: "receipt_anchor",
-        cluster: "devnet",
-        address: RECEIPT_ANCHOR_DEVNET,
-        status: "live (devnet)",
-        explorer_url: explorerAccount(RECEIPT_ANCHOR_DEVNET, "devnet"),
-        description: "Anchors 32-byte receipt hashes on Solana devnet — the anchor_receipt write target",
-      },
       {
         name: "receipt_anchor (mainnet)",
         cluster: "mainnet",
@@ -704,7 +524,7 @@ function getStackStatus(): object {
         address: PROGRAMS.dark_bn254_gate,
         status: "deprecated — do not use",
         explorer_url: explorerAccount(PROGRAMS.dark_bn254_gate),
-        description: "Deprecated demo gate with a hardcoded proof bypass — NOT a real verifier. Superseded by the Groth16 BN254 access gate on devnet.",
+        description: "Deprecated demo gate with a hardcoded proof bypass — NOT a real verifier.",
       },
       {
         name: "null_token",
@@ -715,16 +535,17 @@ function getStackStatus(): object {
         description: "NULL SPL token",
       },
     ],
+    receipt_anchoring: {
+      status: "unavailable",
+      note: "Receipt anchoring is unavailable until the redeploy under a fresh key. anchor_receipt and private_compute still compute hashes locally; nothing is sent.",
+    },
     shielded_access: {
-      note: "Shielded x402 access gate + single-use nullifier: ZK-verified on devnet. Pre-incident mainnet program IDs are retired and withheld.",
-      status: "devnet",
-      programs: ["dark_x402_access_gate", "dark_nullifier_record"],
+      status: "unavailable",
+      note: "The shielded x402 access gate and nullifier record deployments were withdrawn; check_nullifier refuses until the redeploy under a fresh key.",
     },
     private_reputation_stack: {
-      note: "Private track-record proof — ZK-verified on devnet (single-party VK).",
-      status: "devnet",
-      dark_reputation_gate: PROGRAMS.dark_reputation_gate,
-      receipt_commitment_tree: PROGRAMS.receipt_commitment_tree,
+      status: "unavailable",
+      note: "The reputation gate and commitment tree deployments were withdrawn pending a redeploy under a fresh key.",
     },
     dark_null: { status: "devnet", note: "Canonical Dark NULL runs on devnet." },
     x402_payments: {
@@ -743,7 +564,7 @@ function getStackStatus(): object {
       "@parad0x_labs/nulllive-sdk",
     ],
     github: "https://github.com/parad0x-labs/dna-x402",
-    anchor_network: "solana-devnet",
+    anchor_network: "none",
     status_timestamp: new Date().toISOString(),
   };
 }
@@ -786,21 +607,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "anchor_receipt",
         description:
-          "Anchor a 32-byte receipt hash on Solana devnet via the receipt_anchor program (CPQ8Y1bd…). The mainnet receipt_anchor was retired 2026-07-14 — a mainnet RPC is refused with a clear error and nothing is sent. Read-only by default: returns a PREVIEW unless the operator enabled writes (PARAD0X_MCP_ALLOW_WRITE=1) AND you pass confirm:true.",
+          "Anchor a 32-byte receipt hash on Solana via receipt_anchor. Receipt anchoring is unavailable until the redeploy under a fresh key: the tool validates the hash and returns a clear refusal; nothing is signed or sent. The mainnet receipt_anchor was retired 2026-07-14; its historical anchors remain readable.",
         inputSchema: {
           type: "object",
           properties: {
             receipt_hash_hex: {
               type: "string",
               description: "64-character hex string representing the 32-byte SHA-256 receipt hash",
-            },
-            rpc_url: {
-              type: "string",
-              description: "Solana devnet RPC URL (default: PARAD0X_ANCHOR_RPC_URL or https://api.devnet.solana.com). Mainnet RPCs are refused — the mainnet receipt_anchor is retired.",
-            },
-            confirm: {
-              type: "boolean",
-              description: "Must be true to actually submit. Without it the tool returns a preview only (no transaction sent).",
             },
           },
           required: ["receipt_hash_hex"],
@@ -879,7 +692,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "check_nullifier",
         description:
-          "Check whether a privacy-proof nullifier has already been spent on Solana (single-use enforcement). Read-only: derives the dark_nullifier_record PDA and checks if it exists on-chain. No signing, no funds.",
+          "Check whether a privacy-proof nullifier has already been spent (single-use enforcement). Unavailable until the nullifier record program is redeployed under a fresh key: the tool validates the nullifier and returns a clear refusal; no lookup is made.",
         inputSchema: {
           type: "object",
           properties: {
@@ -887,17 +700,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: "string",
               description: "The nullifier as a 64-char hex string OR a decimal BN254 field element (e.g. the reputation_nullifier public input).",
             },
-            rpc_url: {
-              type: "string",
-              description: "Solana RPC URL (default: publicnode mainnet). Use a devnet RPC to check the devnet stack.",
-            },
           },
           required: ["nullifier"],
         },
       },
       {
         name: "get_stack_status",
-        description: "Get the current status of Parad0x Labs programs: devnet write targets, retired mainnet programs (readable), and x402 settlement",
+        description: "Get the current status of Parad0x Labs programs: retired mainnet programs (readable), unavailable services pending redeploy, and x402 settlement",
         inputSchema: {
           type: "object",
           properties: {},
@@ -906,7 +715,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "private_compute",
         description:
-          "Run a computation via an executor endpoint without exposing plaintext inputs. Agent encrypts locally, sends ciphertext, executor returns encrypted result + result hash. Commit (input_hash, result_hash) on Solana. Executor never sees plaintext.",
+          "Run a computation via an executor endpoint without exposing plaintext inputs. Agent encrypts locally, sends ciphertext, executor returns encrypted result + result hash. Executor never sees plaintext. With anchor:true the (input_hash, result_hash) commitment is computed locally; the on-chain anchor is unavailable until the receipt_anchor redeploy under a fresh key.",
         inputSchema: {
           type: "object",
           properties: {
@@ -924,11 +733,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             anchor: {
               type: "boolean",
-              description: "If true, commit (input_hash, result_hash) to Solana devnet via receipt_anchor",
-            },
-            rpc_url: {
-              type: "string",
-              description: "Solana devnet RPC URL used for anchoring (default: PARAD0X_ANCHOR_RPC_URL or https://api.devnet.solana.com). Mainnet RPCs are refused.",
+              description: "If true, compute the (input_hash, result_hash) commitment. The on-chain anchor is refused until the receipt_anchor redeploy under a fresh key.",
             },
           },
           required: ["plaintext_input", "executor_endpoint"],
@@ -1030,17 +835,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "anchor_receipt": {
-        const { receipt_hash_hex, rpc_url, confirm } = args as {
-          receipt_hash_hex: string;
-          rpc_url?: string;
-          confirm?: boolean;
-        };
-        result = await anchorReceipt(
-          receipt_hash_hex,
-          rpc_url ?? process.env.PARAD0X_ANCHOR_RPC_URL ?? ANCHOR_RPC_DEVNET,
-          confirm === true,
-          sessionConsent.has("anchor_receipt")
-        );
+        const { receipt_hash_hex } = args as { receipt_hash_hex: string };
+        result = anchorReceipt(String(receipt_hash_hex ?? ""));
         break;
       }
 
@@ -1074,11 +870,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "check_nullifier": {
-        const { nullifier, rpc_url } = args as { nullifier: string; rpc_url?: string };
-        result = await checkNullifier(
-          nullifier,
-          rpc_url ?? process.env.SOLANA_RPC_URL ?? DEFAULT_RPC
-        );
+        const { nullifier } = args as { nullifier: string };
+        result = checkNullifier(String(nullifier ?? ""));
         break;
       }
 
@@ -1088,16 +881,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "private_compute": {
-        result = await privateCompute({
-          ...(args as {
+        result = await privateCompute(
+          args as {
             plaintext_input: string;
             executor_endpoint: string;
             encryption_key_hex?: string;
             anchor?: boolean;
-            rpc_url?: string;
-          }),
-          consented: sessionConsent.has("private_compute"),
-        });
+          }
+        );
         break;
       }
 
@@ -1136,7 +927,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             funded: false,
             next_steps: [
               "Fund this address with a little SOL (for transaction fees) and USDC (to spend).",
-              "Point your signer at this file (e.g. SOLANA_KEYPAIR or your wallet config) to pay / register / anchor.",
+              "Point your signer at this file (e.g. SOLANA_KEYPAIR or your wallet config) to pay.",
               "BACK IT UP — this file is the only copy of the key; losing it loses the funds.",
             ],
             security: "The secret key was written only to the file above on this machine. It was NOT returned to the model.",
