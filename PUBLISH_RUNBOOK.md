@@ -12,7 +12,7 @@ one `npm publish <file>.tgz --access public` per package.
 | `@parad0x_labs/openclaw-x402-gate` | 2.0.1 | `skills/x402-gate` 2.0.2 | `parad0x_labs-openclaw-x402-gate-2.0.2.tgz` | same `pluginApi` and `contracts.tools` fix; manifest now declares the zk-rep keys; README lists all four tools |
 | `@parad0x_labs/openclaw-agent-passport` | 0.2.0 | `plugins/agent-passport` 0.2.1 | `parad0x_labs-openclaw-agent-passport-0.2.1.tgz` | 0.2.0 has no `openclaw.extensions` (OpenClaw finds no manifest) and no `contracts.tools` |
 | `@parad0x_labs/openclaw-payment-session` | 0.1.1 | `plugins/payment-session` 0.1.2 | `parad0x_labs-openclaw-payment-session-0.1.2.tgz` | same as agent-passport |
-| `@parad0x_labs/openclaw-web0-onboard` | 0.2.0 | `plugins/web0-onboard` 0.2.1 | `parad0x_labs-openclaw-web0-onboard-0.2.1.tgz` | same as agent-passport, plus the devnet `receipt_anchor` / `null_registrar` text |
+| `@parad0x_labs/openclaw-web0-onboard` | 0.2.0 | `plugins/web0-onboard` 0.2.1 | `parad0x_labs-openclaw-web0-onboard-0.2.1.tgz` | same as agent-passport, plus the devnet `receipt_anchor` text; the write tools refuse the devnet dna-x402 NullPay registrar (different instruction set) |
 | `@parad0x_labs/openclaw-context-capsule` | 1.7.1 | `skills/context-capsule` 1.7.2 | `parad0x_labs-openclaw-context-capsule-1.7.2.tgz` | 1.7.1 reads settings from the wrong level of the plugin entry, so configured values never reach the engine |
 | `@parad0x_labs/mcp-server` | 0.2.0 | `skills/mcp-server` 0.2.1 | `parad0x_labs-mcp-server-0.2.1.tgz` | refusal text names the devnet `receipt_anchor` and `dark_nullifier_record` |
 | `@parad0x-labs/liquefy-openclaw-plugin` | not published | `plugins/openclaw-plugin` 0.2.0 | `parad0x-labs-liquefy-openclaw-plugin-0.2.0.tgz` | first release; migrated to `defineToolPlugin`. The name uses the `@parad0x-labs` scope, not `@parad0x_labs`: confirm that scope (or rename) before publishing |
@@ -20,7 +20,7 @@ one `npm publish <file>.tgz --access public` per package.
 `@parad0x_labs/null-mcp` and `@parad0x_labs/web0-tip` live in the private packages
 repository, not here.
 
-Release tarballs (built from commit `2554a17`):
+Release tarballs (built from commit `2554a17`; web0-onboard from `c491171`, the other packages are unchanged between the two):
 
 | Tarball | Files | Size (bytes) | sha256 |
 |---|---:|---:|---|
@@ -28,7 +28,7 @@ Release tarballs (built from commit `2554a17`):
 | `parad0x_labs-openclaw-x402-gate-2.0.2.tgz` | 15 | 33246 | `6824a5e911a474d6559354cca69be9bb52fe539f25f6301d736d09abbcd0a708` |
 | `parad0x_labs-openclaw-agent-passport-0.2.1.tgz` | 7 | 7087 | `baa145c9f81abb84ba29fc93d787767fe7643a77deeb58b7d805137e11e31f8b` |
 | `parad0x_labs-openclaw-payment-session-0.1.2.tgz` | 8 | 7247 | `3c204602ce777fae9fc82de9901503af07a4d5a8b59e99ae974a84ce72235343` |
-| `parad0x_labs-openclaw-web0-onboard-0.2.1.tgz` | 8 | 17049 | `69963518fdfc475fbb0d67d6435b6fdf408cdbbc131c6c64c151fb4ac7b36747` |
+| `parad0x_labs-openclaw-web0-onboard-0.2.1.tgz` | 8 | 17456 | `8f42bb483a8f360e610bfced1b0819046572ab91b70e5982bcfc28458aabea1c` |
 | `parad0x_labs-openclaw-context-capsule-1.7.2.tgz` | 11 | 31259 | `d3ec7ce9271ebb107b6a9c595e0f774075683ff43183698434ffeb3508e86763` |
 | `parad0x_labs-mcp-server-0.2.1.tgz` | 22 | 31493 | `7195b182f51b976a1899fb576ed2ee158da23c30f4ae01a2b8a1ac105dcd95ca` |
 | `parad0x-labs-liquefy-openclaw-plugin-0.2.0.tgz` | 11 | 13299 | `b3ec230300e0b2a4eb559274737d14aea4ba4f70558c5b712e0390ac1bd3ab03` |
@@ -77,7 +77,7 @@ plugin.
 | x402-gate | 14/14 (`test/rep.test.mts` skips without the circuit artifacts) |
 | agent-passport | 16/16 |
 | payment-session | 12/12 |
-| web0-onboard | 43/43 |
+| web0-onboard | 44/44 (at `c491171`) |
 | context-capsule | all 7 `npm test` stages pass; fixture bench matches `bench/results/latest.json`; `test/plugin-load.test.mjs` passes against the real SDK |
 | mcp-server | 29/29, `test/server.smoke.mjs` 2/2 |
 | liquefy-openclaw-plugin | 10/10 |
