@@ -43,6 +43,9 @@
   "dependencies": {
     "typebox": "1.1.39"
   },
+  "overrides": {
+    "@modelcontextprotocol/sdk": "^1.31.0"
+  },
   "peerDependencies": {
     "openclaw": ">=2026.6.1"
   },
