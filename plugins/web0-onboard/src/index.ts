@@ -33,7 +33,11 @@ const buildAll = (raw: Record<string, unknown> | undefined): ToolList => {
   const cfg = readConfig(raw);
   return [
     ...buildOnboardTools(cfg),
-    ...buildRegistrarTools({ solanaWallet: cfg.solanaWallet }, () => activeSigner),
+    // Unset registrar = the retired mainnet registrar → the write tools refuse.
+    ...buildRegistrarTools(
+      { solanaWallet: cfg.solanaWallet, rpcUrl: cfg.rpcUrl, registrar: cfg.registrar },
+      () => activeSigner,
+    ),
   ];
 };
 
@@ -52,6 +56,12 @@ const ConfigSchema = Type.Object(
       Type.Union([Type.Literal("solana-mainnet"), Type.Literal("solana-devnet")], { description: "Settlement network." }),
     ),
     rpcUrl: Type.Optional(Type.String({ description: "RPC override." })),
+    registrar: Type.Optional(
+      Type.String({
+        description:
+          ".null registrar program for the seller write tools. Unset = the mainnet registrar, retired 2026-08-29 (writes refuse).",
+      }),
+    ),
   },
   { additionalProperties: true },
 );
@@ -90,9 +100,10 @@ export default defineToolPlugin({
   id: "web0-onboard",
   name: "web0 Onboard",
   description:
-    "Set up an agent on web0 — identity, a paid x402 storefront, receipt anchoring, " +
-    "and a .null name: register it, publish your x402 endpoint, get paid by name. " +
-    "Sell services for USDC on Solana; funds settle to your own wallet. Non-custodial.",
+    "Set up an agent on web0 — identity, a paid x402 storefront, receipt anchoring (devnet), " +
+    "and the .null name status. Sell services for USDC on Solana; funds settle to your own " +
+    "wallet. Non-custodial. The mainnet .null registrar was retired 2026-08-29: existing names " +
+    "resolve read-only and the name write tools refuse until the relaunch.",
   configSchema: ConfigSchema,
   tools: (tool) =>
     TEMPLATE.map((t) =>

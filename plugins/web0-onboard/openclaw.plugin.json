@@ -25,6 +25,10 @@
       "rpcUrl": {
         "type": "string",
         "description": "Solana RPC URL override. Defaults to solana-rpc.publicnode.com."
+      },
+      "registrar": {
+        "type": "string",
+        "description": ".null registrar program id for the seller write tools (register_null_name, set_null_endpoint, set_null_stealth_meta). Unset = the mainnet registrar NXgQhepF…, retired 2026-08-29: names resolve read-only and the write tools refuse. Set to a deployed registrar (with a matching rpcUrl) to write."
       }
     }
   }

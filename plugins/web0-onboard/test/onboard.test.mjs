@@ -12,10 +12,14 @@ import { PublicKey } from "@solana/web3.js";
 import {
   DARK_SECP256K1_AUTH,
   RECEIPT_ANCHOR,
+  RECEIPT_ANCHOR_DEVNET,
+  RECEIPT_ANCHOR_MAINNET_RETIRED,
+  NULL_REGISTRAR_MAINNET,
   USDC_MINT,
   DEFAULT_RPC,
   MAX_SERVICE_PRICE_USDC,
   readConfig,
+  buildReceiptsBlock,
   normalizeName,
   isValidNullLabel,
   suggestNullLabel,
@@ -43,6 +47,15 @@ test("no seized program ID is referenced; RPC is publicnode", () => {
   assert.equal(DEFAULT_RPC, "https://solana-rpc.publicnode.com");
   assert.doesNotMatch(DEFAULT_RPC, /api\.mainnet-beta\.solana\.com/);
   assert.equal(USDC_MINT["solana-mainnet"], "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+});
+
+test("active receipt anchor is the devnet program, never the retired mainnet one", () => {
+  assert.equal(RECEIPT_ANCHOR_DEVNET, "CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst");
+  assert.equal(new PublicKey(RECEIPT_ANCHOR_DEVNET).toBytes().length, 32); // valid key
+  assert.equal(RECEIPT_ANCHOR, RECEIPT_ANCHOR_DEVNET);
+  assert.equal(RECEIPT_ANCHOR_MAINNET_RETIRED, "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN");
+  assert.notEqual(RECEIPT_ANCHOR, RECEIPT_ANCHOR_MAINNET_RETIRED);
+  assert.equal(NULL_REGISTRAR_MAINNET, "NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np");
 });
 
 // ── .null label rules ─────────────────────────────────────────────────────────
@@ -111,6 +124,12 @@ test("config defaults feed validation (wallet + network from config)", () => {
   assert.equal(r.network, "solana-devnet");
 });
 
+test("readConfig carries an explicit registrar (for the write tools) and ignores non-strings", () => {
+  assert.equal(readConfig({ registrar: "SomeRegistrar111" }).registrar, "SomeRegistrar111");
+  assert.equal(readConfig({ registrar: 5 }).registrar, undefined);
+  assert.equal(readConfig({}).registrar, undefined);
+});
+
 // ── PDA derivation ──────────────────────────────────────────────────────────────
 
 test("derivePassportPda: deterministic, correct program, null on bad wallet", () => {
@@ -139,6 +158,7 @@ test("buildOnboardPlan: full plan with name reserved + cheapest gate price", () 
   assert.equal(plan.name.requested, "myagent.null");
   assert.match(plan.name.pay_by_name_preview, /pay_x402\("myagent\.null"\)/);
   assert.equal(plan.receipts.program, RECEIPT_ANCHOR);
+  assert.notEqual(plan.receipts.program, RECEIPT_ANCHOR_MAINNET_RETIRED);
 });
 
 test("buildOnboardPlan: no name → name section is null", () => {
@@ -154,16 +174,24 @@ test("suggestNullLabel: service slug, wallet fallback, null when nothing valid",
   assert.equal(suggestNullLabel([{ name: "x", priceUsdc: 1 }]), null); // too short + no wallet
 });
 
-test("buildOnboardPlan: claiming the name is step 1 (live register tool), with a suggestion when omitted", () => {
+test("buildOnboardPlan: name is validated but registration is frozen; storefront leads the checklist", () => {
   const withName = buildOnboardPlan({
     validation: validateOnboardInput({}, { solanaWallet: WALLET, name: "myagent", services: SERVICES }),
     identityRegistered: false,
   });
-  assert.match(withName.next_steps[0], /register_null_name/);
-  assert.match(withName.next_steps[0], /myagent\.null/);
-  assert.match(withName.name.status, /Claim myagent\.null now/);
-  assert.match(withName.name.claim_preview, /register_null_name/);
-  assert.doesNotMatch(withName.name.status, /next web0-onboard upgrade|via the portal/);
+  assert.match(withName.next_steps[0], /x402-gate/);
+  assert.equal(withName.name.requested, "myagent.null");
+  assert.equal(withName.name.registration, "frozen");
+  assert.equal(withName.name.registrar, NULL_REGISTRAR_MAINNET);
+  assert.match(withName.name.status, /retired on 2026-08-29/);
+  assert.match(withName.name.status, /resolve read-only/);
+  assert.match(withName.name.status, /frozen until the registrar relaunch/);
+  assert.equal(withName.name.claim_preview, undefined);
+  assert.ok(withName.next_steps.some((s) => /registration is frozen/.test(s) && /read-only/.test(s)));
+  // No step tells the agent to run a write tool against the retired registrar.
+  for (const step of withName.next_steps) {
+    assert.doesNotMatch(step, /register_null_name\(|set_null_endpoint\(/);
+  }
 
   const noName = buildOnboardPlan({
     validation: validateOnboardInput({}, { solanaWallet: WALLET, services: SERVICES }),
@@ -171,7 +199,57 @@ test("buildOnboardPlan: claiming the name is step 1 (live register tool), with a
   });
   assert.equal(noName.name, null);
   assert.equal(noName.name_suggestion.suggested, "summarize.null");
-  assert.match(noName.next_steps[0], /register_null_name/);
+  assert.equal(noName.name_suggestion.registration, "frozen");
+  assert.equal(noName.name_suggestion.claim_preview, undefined);
+  assert.match(noName.next_steps[0], /x402-gate/);
+});
+
+test("onboard output carries no LIVE / claim-now / register-on-mainnet text (both networks, with + without name)", () => {
+  for (const network of ["solana-mainnet", "solana-devnet"]) {
+    for (const name of ["myagent", undefined]) {
+      const plan = buildOnboardPlan({
+        validation: validateOnboardInput({}, { solanaWallet: WALLET, name, services: SERVICES, network }),
+        identityRegistered: false,
+      });
+      const text = JSON.stringify(plan);
+      assert.doesNotMatch(text, /LIVE/);
+      assert.doesNotMatch(text, /claim .*now/i);
+      assert.doesNotMatch(text, /is live the moment/i);
+      assert.doesNotMatch(text, /live on mainnet/i);
+      assert.doesNotMatch(text, /register_null_name\(\{/);
+      assert.match(plan.summary, /frozen until the registrar relaunch/);
+      assert.match(plan.summary, /read-only/);
+    }
+  }
+});
+
+test("receipts block is network-aware: devnet → CPQ8 active; mainnet → retired anchor stated, anchoring on devnet", () => {
+  const dev = buildReceiptsBlock("solana-devnet");
+  assert.equal(dev.program, RECEIPT_ANCHOR_DEVNET);
+  assert.equal(dev.anchor_network, "solana-devnet");
+  assert.equal(dev.mainnet_program_retired, undefined);
+  assert.doesNotMatch(JSON.stringify(dev), new RegExp(RECEIPT_ANCHOR_MAINNET_RETIRED));
+
+  const main = buildReceiptsBlock("solana-mainnet");
+  assert.equal(main.program, RECEIPT_ANCHOR_DEVNET); // active anchor is never the retired id
+  assert.equal(main.anchor_network, "solana-devnet");
+  assert.equal(main.mainnet_program_retired, RECEIPT_ANCHOR_MAINNET_RETIRED);
+  assert.equal(main.mainnet_retired_at, "2026-07-14");
+  assert.match(main.note, /retired on 2026-07-14/);
+  assert.match(main.note, /anchoring runs on devnet/);
+
+  // Wired into the plan by network.
+  const devPlan = buildOnboardPlan({
+    validation: validateOnboardInput({}, { solanaWallet: WALLET, services: SERVICES, network: "solana-devnet" }),
+    identityRegistered: false,
+  });
+  assert.deepEqual(devPlan.receipts, dev);
+  const mainPlan = buildOnboardPlan({
+    validation: validateOnboardInput({}, { solanaWallet: WALLET, services: SERVICES }),
+    identityRegistered: false,
+  });
+  assert.deepEqual(mainPlan.receipts, main);
+  assert.ok(mainPlan.next_steps.some((s) => /mainnet receipt_anchor program was retired 2026-07-14/.test(s)));
 });
 
 // ── tool factory ────────────────────────────────────────────────────────────────
@@ -181,6 +259,8 @@ test("buildOnboardTools registers exactly web0_onboard", () => {
   assert.equal(tools.length, 1);
   assert.equal(tools[0].name, "web0_onboard");
   assert.equal(typeof tools[0].handler, "function");
+  assert.doesNotMatch(tools[0].description, /LIVE|claim .*now/i);
+  assert.match(tools[0].description, /frozen/);
   assert.deepEqual(
     Object.keys(tools[0].parameters).sort(),
     ["ethAddress", "name", "network", "services", "solanaWallet"],

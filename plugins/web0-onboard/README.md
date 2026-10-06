@@ -1,7 +1,7 @@
 # @parad0x_labs/openclaw-web0-onboard 🚀
 
 **One call sets your agent up on web0** — identity, a paid x402 storefront, receipt
-anchoring, and a `.null` name-binding plan. Sell services for USDC on Solana; funds
+anchoring, and the `.null` name status. Sell services for USDC on Solana; funds
 settle to **your** wallet. Read-only, non-custodial.
 
 ```bash
@@ -30,34 +30,42 @@ Returns a consolidated, validated setup:
 |---|---|
 | `identity` | your on-chain identity PDA + whether it's bound |
 | `storefront` | drop-in `x402-gate` config (recipient = your wallet, per-service prices) |
-| `receipts` | the live `receipt_anchor` program for a permanent sales trail |
-| `name` | a validated `.null` binding plan you apply with the seller tools below |
-| `next_steps` / `summary` | an ordered, human-readable go-live checklist |
+| `receipts` | network-aware anchoring: `receipt_anchor` on devnet (`CPQ8Y1bd…`); on mainnet it states that the mainnet anchor (`6HSRGivd…`) was retired 2026-07-14 and anchoring runs on devnet |
+| `name` | your `.null` label, validated, plus its status: registration frozen, existing names resolve read-only |
+| `next_steps` / `summary` | an ordered, human-readable setup checklist |
 
-## Seller-side tools (the naming layer is live)
+## `.null` names — mainnet registrar retired 2026-08-29
 
-Register once via `setWeb0Signer(wallet)`; your wallet signs every tx — the plugin
-never holds a key. Each tool takes `dryRun: true` to preview without signing.
+The mainnet `.null` registrar (`NXgQhepF…`) was retired on 2026-08-29. Its accounts
+persist, so **existing names still resolve read-only** — `pay_x402("name.null")` keeps
+working for names that already publish an endpoint. Registration, endpoint updates,
+stealth-meta updates and transfers are **frozen until the registrar relaunch**.
 
-| Tool | Does |
+The seller tools below carry the verified registrar ABI. Against the default (retired
+mainnet) registrar each one refuses up front — dry runs included — with that message.
+They build transactions only when `registrar` in the plugin config names a different
+deployed registrar (e.g. devnet, with a matching `rpcUrl`). The host registers a
+signer via `setWeb0Signer(wallet)`; your wallet signs every tx — the plugin never
+holds a key. Each tool takes `dryRun: true` to preview without signing.
+
+| Tool | Does (on a configured, deployed registrar) |
 |---|---|
-| `register_null_name({ name })` | register your `.null` name on mainnet-beta (reads the live fee + treasury; real SOL) |
-| `set_null_endpoint({ name, endpoint })` | publish your x402 endpoint on-chain — now buyers `pay_x402("yourname.null")` |
+| `register_null_name({ name })` | register a `.null` name (reads the registrar's fee + treasury) |
+| `set_null_endpoint({ name, endpoint })` | publish your x402 endpoint on the name (`UPDATE_ENDPOINT`) |
 | `set_null_stealth_meta({ name, stealth_meta_hex })` | publish a stealth address for recipient-private pay-by-name |
+
+Recipient-private pay-by-name has been demonstrated end to end on devnet.
 
 ## How it fits
 
 ```
 seller: web0_onboard(...) → enable x402-gate with storefront.x402_gate_config
-        register_null_name("myagent") → set_null_endpoint("myagent", <gate URL>)
-buyer:  pay_x402("myagent.null")  → resolve → quote → pay USDC → receipt
+buyer:  pay_x402(<your x402-gate URL>)  → quote → pay USDC → receipt hash
+        pay_x402("legacy.null")         → read-only resolve of an existing name → same flow
 ```
 
-The full loop runs on Solana mainnet-beta today (public beta, not yet audited) —
-identity, storefront, receipts, **and** the `.null` naming layer (registrar
-`NXgQhepF…`; self-serve registration rolling out). Register a name, publish
-your x402 endpoint, and buyers `pay_x402("yourname.null")`. Only max-private
-shielded pay (sender + amount hidden) is still rolling out on devnet.
+x402 USDC payment (`x402-gate` / `x402-pay` SPL transfers) runs on mainnet (opt-in)
+and devnet. Receipt anchoring runs on devnet (`CPQ8Y1bd…`).
 
 ## Trust model
 
@@ -66,7 +74,7 @@ shielded pay (sender + amount hidden) is still rolling out on devnet.
   or reads a key, and never moves funds itself. Every write tool has `dryRun`.
 - **Owner-gated** — endpoint/stealth writes require you to be the name's on-chain
   owner (checked before submit).
-- **Public RPC only** (`solana-rpc.publicnode.com`); registrar pinned to the clean
-  `NXgQhepF…` (never the seized pre-incident id).
+- **Public RPC only** (`solana-rpc.publicnode.com`) by default. Name reads default
+  to `NXgQhepF…` (never the seized pre-incident id); writes to it are refused.
 
 Pairs with `x402-gate`, `x402-pay`, and `agent-passport`. MIT licensed.

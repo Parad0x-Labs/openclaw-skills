@@ -2,13 +2,15 @@
  * web0-onboard — host-free core.
  *
  * One call assembles a complete, validated web0 setup for an OpenClaw agent:
- * on-chain identity, a paid x402 storefront, receipt anchoring, and a .null
- * name-binding plan. All logic lives here with NO `openclaw/*` host import, so
- * it loads and unit-tests standalone. index.ts is the thin plugin wrapper.
+ * on-chain identity, a paid x402 storefront, network-aware receipt anchoring,
+ * and the .null name status. All logic lives here with NO `openclaw/*` host
+ * import, so it loads and unit-tests standalone. index.ts is the thin wrapper.
  *
  * Trust model: READ-ONLY. Derives/queries on-chain state and emits config — it
  * never signs, never holds a key, never moves funds. The agent's own signer
- * runs the x402-gate and (when the naming layer is live) the registration tx.
+ * runs the x402-gate. .null registration is frozen on mainnet (registrar
+ * NXgQhepF… retired 2026-08-29; existing names resolve read-only), so the plan
+ * never tells the agent to register there.
  *
  * Self-contained per the openclaw-skills modularity contract: constants are
  * vendored, never imported from sibling skills. No seized pre-incident IDs.
@@ -18,11 +20,22 @@ import { Connection, PublicKey } from "@solana/web3.js";
 
 export type SolanaNetwork = "solana-mainnet" | "solana-devnet";
 
-// ── Live program IDs (vendored) ──────────────────────────────────────────────
+// ── Program IDs (vendored) ───────────────────────────────────────────────────
 // Never add dark_x402_access_gate / dark_nullifier_record — seized pre-incident
 // IDs awaiting clean redeploy under Squads multisig.
 export const DARK_SECP256K1_AUTH = "AqwBbV13AoczhoELwP8oxT3nDqB6MsLWXauNzHkssZ9B";
-export const RECEIPT_ANCHOR = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN";
+
+/** Active receipt_anchor program — devnet. Receipt anchoring runs here. */
+export const RECEIPT_ANCHOR_DEVNET = "CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst";
+/** The active receipt anchor (devnet). */
+export const RECEIPT_ANCHOR = RECEIPT_ANCHOR_DEVNET;
+/** Mainnet receipt_anchor — RETIRED 2026-07-14. Never presented as active. */
+export const RECEIPT_ANCHOR_MAINNET_RETIRED = "6HSRGivdYR5D7yTDy1TFMCM8h3LzXxRtKU1RA3RnCMRN";
+export const RECEIPT_ANCHOR_MAINNET_RETIRED_AT = "2026-07-14";
+
+/** Mainnet .null registrar — RETIRED 2026-08-29; accounts persist (read-only). */
+export const NULL_REGISTRAR_MAINNET = "NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np";
+export const NULL_REGISTRAR_MAINNET_RETIRED_AT = "2026-08-29";
 
 /** USDC SPL mint per network. */
 export const USDC_MINT: Record<SolanaNetwork, string> = {
@@ -47,6 +60,11 @@ export interface Web0OnboardConfig {
   network?: SolanaNetwork;
   /** RPC override; defaults to publicnode. */
   rpcUrl?: string;
+  /**
+   * .null registrar program for the seller write tools. Unset = the retired
+   * mainnet registrar, against which the write tools refuse.
+   */
+  registrar?: string;
 }
 
 export interface ServiceInput {
@@ -72,6 +90,7 @@ export function readConfig(raw: Record<string, unknown> | undefined): Web0Onboar
     name: typeof cfg.name === "string" ? cfg.name : undefined,
     network: net,
     rpcUrl: typeof cfg.rpcUrl === "string" ? cfg.rpcUrl : undefined,
+    registrar: typeof cfg.registrar === "string" ? cfg.registrar : undefined,
   };
 }
 
@@ -216,6 +235,39 @@ export async function accountExists(connection: Connection, pda: string): Promis
 
 // ── Plan assembly (pure) ──────────────────────────────────────────────────────
 
+/** Receipts block, keyed to the settlement network. */
+export function buildReceiptsBlock(network: SolanaNetwork): Record<string, unknown> {
+  if (network === "solana-devnet") {
+    return {
+      network,
+      anchor_network: "solana-devnet",
+      program: RECEIPT_ANCHOR_DEVNET,
+      note:
+        "x402-gate and x402-pay derive matching receipt hashes; anchor each sale via " +
+        `receipt_anchor on devnet (${RECEIPT_ANCHOR_DEVNET}) for a verifiable trail.`,
+    };
+  }
+  return {
+    network,
+    anchor_network: "solana-devnet",
+    program: RECEIPT_ANCHOR_DEVNET,
+    mainnet_program_retired: RECEIPT_ANCHOR_MAINNET_RETIRED,
+    mainnet_retired_at: RECEIPT_ANCHOR_MAINNET_RETIRED_AT,
+    note:
+      `The mainnet receipt_anchor program (${RECEIPT_ANCHOR_MAINNET_RETIRED}) was retired on ` +
+      `${RECEIPT_ANCHOR_MAINNET_RETIRED_AT}; receipt anchoring runs on devnet (${RECEIPT_ANCHOR_DEVNET}). ` +
+      "x402-gate and x402-pay still derive matching receipt hashes for every mainnet sale.",
+  };
+}
+
+const NAME_STATUS =
+  `The mainnet .null registrar (NXgQhepF…) was retired on ${NULL_REGISTRAR_MAINNET_RETIRED_AT}. ` +
+  "Existing (legacy) .null names still resolve read-only, so pay_x402 by name keeps working for " +
+  "names that already publish an endpoint. New registrations, endpoint updates, stealth-meta " +
+  "updates and transfers are frozen until the registrar relaunch — the register_null_name / " +
+  "set_null_endpoint / set_null_stealth_meta tools refuse against it. Your storefront does not " +
+  "need a name: buyers can pay your x402-gate URL directly.";
+
 /**
  * Assemble the consolidated onboard plan. Pure — `identityRegistered` is passed
  * in so the assembly is testable without a network call. The tool handler does
@@ -230,6 +282,7 @@ export function buildOnboardPlan(opts: {
   const passportPda = derivePassportPda(wallet);
   const fullName = v.name ? `${v.name}.null` : null;
   const suggested = fullName ? null : suggestNullLabel(v.services, wallet);
+  const receipts = buildReceiptsBlock(v.network);
 
   // Recommend a gate config keyed off the first/cheapest service price.
   const defaultPrice = v.services.reduce(
@@ -269,60 +322,48 @@ export function buildOnboardPlan(opts: {
         "Configure the x402-gate plugin with x402_gate_config to start charging. " +
         "For multiple price points, run one gate per price (or per route).",
     },
-    receipts: {
-      program: RECEIPT_ANCHOR,
-      note:
-        "x402-gate and x402-pay derive matching receipt hashes; anchor each sale " +
-        "via receipt_anchor for a permanent, verifiable trail.",
-    },
+    receipts,
     name: fullName
       ? {
           requested: fullName,
           valid: true,
+          registration: "frozen",
+          registrar: NULL_REGISTRAR_MAINNET,
+          registrar_retired_at: NULL_REGISTRAR_MAINNET_RETIRED_AT,
           binding: {
             target_x402_endpoint: "<your x402-gate URL>",
             owner: wallet,
           },
-          status:
-            `the .null naming layer is LIVE on mainnet (registrar NXgQhepF…). Claim ${fullName} now: ` +
-            `call register_null_name({ name: "${v.name}", dryRun: true }) to preview the PDA + fee, then run ` +
-            `it again to sign. Follow with set_null_endpoint to publish your x402 URL — pay-by-name is live the moment you do.`,
-          claim_preview: `register_null_name({ name: "${v.name}", dryRun: true })`,
-          pay_by_name_preview: `pay_x402("${fullName}")  // live once you register + publish your endpoint`,
+          status: NAME_STATUS,
+          pay_by_name_preview:
+            `pay_x402("${fullName}")  // resolves only if ${fullName} already exists on the legacy registrar with an endpoint`,
         }
       : null,
     name_suggestion: suggested
       ? {
           suggested: `${suggested}.null`,
-          claim_preview: `register_null_name({ name: "${suggested}", dryRun: true })`,
+          registration: "frozen",
           note:
-            `no name set — "${suggested}.null" is derived from your setup. Claim it (or pass your own) ` +
-            `to give this agent a pay-by-name identity. The naming layer is LIVE on mainnet.`,
+            `no name set — "${suggested}.null" is a valid label derived from your setup, for when ` +
+            `.null registration reopens. ${NAME_STATUS}`,
         }
       : null,
-    // claim first: the name is the agent's identity + pay-by-name address, so it
-    // leads the checklist (not an afterthought). register/endpoint are live tools.
     next_steps: [
-      fullName
-        ? `Claim ${fullName} now — register_null_name({ name: "${v.name}", dryRun: true }) to preview, then run it again to sign. This is your agent's identity + pay-by-name address.`
-        : suggested
-          ? `Claim your .null name now — register_null_name({ name: "${suggested}", dryRun: true }) previews "${suggested}.null" (or pass your own). It's your agent's identity + pay-by-name address.`
-          : `Pick a .null name and claim it — register_null_name({ name: "<yourname>", dryRun: true }) previews it. It's your agent's identity + pay-by-name address.`,
-      `Publish your x402 endpoint on the name — set_null_endpoint({ name: "${v.name ?? suggested ?? "<yourname>"}", endpoint: "<your x402-gate URL>" }) — now buyers pay_x402("${fullName ?? (suggested ? `${suggested}.null` : "<yourname>.null")}").`,
       "Enable the x402-gate plugin with the storefront.x402_gate_config block — you're selling for USDC, funds to your own wallet.",
+      "Point buyers at your x402-gate URL; their agents pay it directly with x402-pay (no .null name needed).",
       identityRegistered
         ? "Identity is on-chain — nothing to do."
         : "Optionally bind your identity with the agent-passport plugin (recommended for verifiable counterparties).",
-      "Point buyers at your x402 endpoint; their agents pay with x402-pay and receipts anchor automatically.",
+      v.network === "solana-devnet"
+        ? `Anchor sale receipts via receipt_anchor on devnet (${RECEIPT_ANCHOR_DEVNET}).`
+        : `Receipt anchoring runs on devnet (${RECEIPT_ANCHOR_DEVNET}); the mainnet receipt_anchor program was retired ${RECEIPT_ANCHOR_MAINNET_RETIRED_AT}.`,
+      `.null names: registration is frozen until the registrar relaunch (mainnet registrar retired ${NULL_REGISTRAR_MAINNET_RETIRED_AT}); existing names resolve read-only.` +
+        (fullName ? ` ${fullName} is a valid label to use once registration reopens.` : ""),
     ],
     summary:
       `web0 setup assembled for ${wallet} on ${v.network}: ` +
-      `${v.services.length} service(s), payout to your wallet, receipts anchored` +
-      (fullName
-        ? `, claim ${fullName} now (register_null_name) to turn on pay-by-name.`
-        : suggested
-          ? `, claim "${suggested}.null" (register_null_name) to turn on pay-by-name.`
-          : "."),
+      `${v.services.length} service(s), payout to your wallet, receipt anchoring on devnet. ` +
+      ".null registration is frozen until the registrar relaunch; existing names resolve read-only.",
   };
 }
 
@@ -343,8 +384,9 @@ export function buildOnboardTools(config: Web0OnboardConfig): ToolDef[] {
     description:
       "Set up an agent on web0 in one call: validate inputs, check on-chain identity, " +
       "and return a complete setup — a paid x402 storefront config (funds to your wallet), " +
-      "receipt anchoring, and a .null name-binding plan. Read-only: emits config and checks " +
-      "state; never signs or moves funds.",
+      "network-aware receipt anchoring (devnet), and the .null name status (mainnet registration " +
+      "frozen until the registrar relaunch; existing names resolve read-only). Read-only: emits " +
+      "config and checks state; never signs or moves funds.",
     parameters: {
       name: {
         type: "string",

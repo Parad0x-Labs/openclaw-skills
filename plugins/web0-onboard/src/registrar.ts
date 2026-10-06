@@ -1,14 +1,22 @@
 /**
  * web0-onboard — seller-side registrar writes (host-free core).
  *
- * Byte-exact instruction encoders for the live mainnet .null registrar
- * (NXgQhepF…), built from its verified ABI:
+ * Byte-exact instruction encoders for the .null registrar ABI (verified against
+ * the mainnet program NXgQhepF…):
  *   - REGISTER        0x02  data: name[64] arweave_txid[32] currency[1]
  *   - UPDATE_ENDPOINT 0x06  data: name[64] x402_endpoint[128]
  *   - SET_STEALTH_META 0x0C data: name[64] stealth_meta[64]
  * All names are fixed [u8;64] null-padded; the domain PDA seeds the SHA-256 of
  * that exact 64-byte buffer. Non-custodial: these build UNSIGNED transactions —
  * the owner's wallet signs, this module never holds a key.
+ *
+ * Mainnet status: the registrar NXgQhepF… was retired on 2026-08-29 (its
+ * ProgramData is closed, so the program cannot be invoked). Its accounts persist,
+ * so existing NullDomain records and the registry config stay READABLE and names
+ * resolve read-only — but register / endpoint / stealth-meta / transfer writes
+ * cannot succeed there until a relaunch. The write tools below therefore refuse
+ * the retired id (dry runs included) and only build transactions when
+ * `config.registrar` names a different, deployed registrar (e.g. on devnet).
  *
  * Self-contained per the modularity contract: addresses are vendored, never the
  * seized pre-incident registrar.
@@ -24,9 +32,26 @@ import {
 } from "@solana/web3.js";
 import { createHash } from "crypto";
 
-/** Live mainnet .null registrar (clean redeploy under multisig). */
+/**
+ * Mainnet .null registrar — RETIRED 2026-08-29 (ProgramData closed). Kept as the
+ * default for read-only helpers: its NullDomain + registry config accounts
+ * persist, so existing names still resolve. Never a write target.
+ */
 export const NULL_REGISTRAR_MAINNET = "NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np";
+export const NULL_REGISTRAR_MAINNET_RETIRED_AT = "2026-08-29";
 export const RESOLVE_RPC_MAINNET = "https://solana-rpc.publicnode.com";
+
+/** Error returned by every write tool aimed at the retired mainnet registrar. */
+export const REGISTRAR_RETIRED_ERROR =
+  `The mainnet .null registrar (${NULL_REGISTRAR_MAINNET}) was retired on ${NULL_REGISTRAR_MAINNET_RETIRED_AT} ` +
+  "and can no longer be invoked. Existing .null names still resolve read-only; registration, endpoint " +
+  "updates, stealth-meta updates and transfers are frozen until the registrar relaunch. " +
+  "To write against a different deployed registrar (e.g. devnet), set config.registrar and config.rpcUrl.";
+
+/** True if `registrar` is a retired program that can no longer accept writes. */
+export function isRetiredRegistrar(registrar: string): boolean {
+  return registrar === NULL_REGISTRAR_MAINNET;
+}
 
 // Instruction discriminators (registrar instruction.rs).
 export const IX_REGISTER = 0x02;
@@ -121,6 +146,8 @@ export function parseRegistryConfig(data: Buffer): RegistryConfig {
 }
 
 // ── instruction encoders (pure, byte-exact) ───────────────────────────────────
+// `registrar` defaults to the mainnet id only as the ABI reference; an ix aimed
+// at that retired program cannot execute. Pass the deployed registrar to send.
 
 /**
  * REGISTER (0x02). Free-pilot path passes no fee account; SOL-fee path passes the
@@ -270,9 +297,26 @@ export interface RegistrarToolsConfig {
 }
 
 const EXPLORER = "https://explorer.solana.com/tx/";
+const explorerUrl = (sig: string, rpcUrl: string): string =>
+  EXPLORER + sig + (/devnet/i.test(rpcUrl) ? "?cluster=devnet" : "");
 
-/** Read a domain's on-chain owner (offset 65), or null if unregistered. */
-async function readDomainOwner(
+/** Refusal payload for a write aimed at a retired registrar (no network call). */
+function retiredRefusal(registrar: string): Record<string, unknown> {
+  return {
+    ok: false,
+    error: REGISTRAR_RETIRED_ERROR,
+    registrar,
+    retired_at: NULL_REGISTRAR_MAINNET_RETIRED_AT,
+    read_only: true,
+  };
+}
+
+/**
+ * Read a domain's on-chain owner (offset 65), or exists:false if unregistered.
+ * Read-only — works against the retired mainnet registrar, whose NullDomain
+ * accounts persist.
+ */
+export async function readDomainOwner(
   connection: Connection,
   name: string,
   registrar: string,
@@ -287,6 +331,11 @@ async function readDomainOwner(
  * Build the seller-side write tools. Non-custodial: each builds an UNSIGNED tx,
  * the host signer signs it, then it broadcasts. `getSigner` returns the live
  * host signer (or null). Every tool supports `dryRun` to preview without signing.
+ *
+ * With the default (retired mainnet) registrar every tool refuses up front —
+ * dry runs included, and before any RPC call — because no transaction against
+ * it can succeed. Pass `config.registrar` (+ a matching `rpcUrl`) to target a
+ * deployed registrar instead.
  */
 export function buildRegistrarTools(
   config: RegistrarToolsConfig,
@@ -296,18 +345,25 @@ export function buildRegistrarTools(
   const rpcUrl = config.rpcUrl ?? RESOLVE_RPC_MAINNET;
   const conn = () => new Connection(rpcUrl, "confirmed");
   const payerOf = (): string | undefined => getSigner()?.publicKey ?? config.solanaWallet;
+  const retired = isRetiredRegistrar(registrar);
+  const FROZEN_NOTE =
+    ` The mainnet registrar NXgQhepF… was retired ${NULL_REGISTRAR_MAINNET_RETIRED_AT}: against it this tool ` +
+    "refuses (dry runs included) — existing names resolve read-only, writes are frozen until the relaunch. " +
+    "Works only when config.registrar names a different deployed registrar (e.g. devnet).";
 
   const registerNullName: ToolDef = {
     name: "register_null_name",
     description:
-      "Register a .null name on Solana mainnet (the agent's identity + payment handle). " +
-      "Non-custodial: builds the transaction; the owner's wallet signs. Costs the on-chain " +
-      "registration fee + rent (real SOL). Pass dryRun:true to preview the cost/PDA first.",
+      "Register a .null name (the agent's identity + payment handle) on the configured registrar. " +
+      "Non-custodial: builds the transaction; the owner's wallet signs. Costs the registrar's " +
+      "registration fee + rent. Pass dryRun:true to preview the cost/PDA first." +
+      FROZEN_NOTE,
     parameters: {
       name: { type: "string", description: "The .null name to register (4-32 chars, a-z/0-9/-)." },
       dryRun: { type: "boolean", description: "Preview the registration (PDA, fee) without signing." },
     },
     async handler(params: Record<string, unknown>) {
+      if (retired) return retiredRefusal(registrar);
       const name = String(params.name ?? "");
       const v = validateName(name);
       if (!v.ok) return { ok: false, error: v.error };
@@ -336,6 +392,7 @@ export function buildRegistrarTools(
           ok: true,
           dry_run: true,
           would_register: `${normalizeName(name)}.null`,
+          registrar,
           pda: probe.pda,
           payer,
           currency: "SOL",
@@ -349,22 +406,24 @@ export function buildRegistrarTools(
       const unsigned = await buildUnsignedTx(connection, signer.publicKey, [ix]);
       const signed = await signer.signTransaction(unsigned.txBase64);
       const signature = await broadcastSigned(connection, signed, unsigned.blockhash, unsigned.lastValidBlockHeight);
-      return { ok: true, name: `${normalizeName(name)}.null`, pda: probe.pda, signature, explorer_url: EXPLORER + signature };
+      return { ok: true, name: `${normalizeName(name)}.null`, registrar, pda: probe.pda, signature, explorer_url: explorerUrl(signature, rpcUrl) };
     },
   };
 
   const setNullEndpoint: ToolDef = {
     name: "set_null_endpoint",
     description:
-      "Publish your .null name's x402 endpoint on-chain (UPDATE_ENDPOINT) so buyers can " +
-      "pay_x402(\"yourname.null\"). Owner-only, non-custodial; tiny tx fee, no registration fee. " +
-      "dryRun:true previews without signing.",
+      "Publish your .null name's x402 endpoint on-chain (UPDATE_ENDPOINT) on the configured " +
+      "registrar so buyers can pay_x402(\"yourname.null\"). Owner-only, non-custodial; tiny tx fee, " +
+      "no registration fee. dryRun:true previews without signing." +
+      FROZEN_NOTE,
     parameters: {
       name: { type: "string", description: "Your .null name (you must be its owner)." },
       endpoint: { type: "string", description: "The x402 endpoint URL (<=128 bytes), e.g. https://api.you.dev/x402." },
       dryRun: { type: "boolean", description: "Preview without signing." },
     },
     async handler(params: Record<string, unknown>) {
+      if (retired) return retiredRefusal(registrar);
       const name = String(params.name ?? "");
       const endpoint = String(params.endpoint ?? "");
       const v = validateName(name);
@@ -382,9 +441,10 @@ export function buildRegistrarTools(
       if (dryRun || !signer) {
         return {
           ok: true,
-          dry_run: !signer ? false : true,
+          dry_run: true,
           would_set_endpoint: endpoint,
           name: `${normalizeName(name)}.null`,
+          registrar,
           pda: deriveDomainPda(name, registrar).toBase58(),
           owner,
           note: signer ? "Preview only — re-run without dryRun to publish." : "No signer configured — preview only; call setWeb0Signer to publish.",
@@ -403,10 +463,11 @@ export function buildRegistrarTools(
         ok: true,
         name: `${normalizeName(name)}.null`,
         endpoint,
+        registrar,
         pda: probe.pda,
         signature,
-        explorer_url: EXPLORER + signature,
-        note: `Live — buyers can now pay_x402("${normalizeName(name)}.null").`,
+        explorer_url: explorerUrl(signature, rpcUrl),
+        note: `Endpoint published on registrar ${registrar} — buyers resolving against it can pay_x402("${normalizeName(name)}.null").`,
       };
     },
   };
@@ -414,15 +475,17 @@ export function buildRegistrarTools(
   const setNullStealthMeta: ToolDef = {
     name: "set_null_stealth_meta",
     description:
-      "Publish your .null name's NullPay stealth meta-address (SET_STEALTH_META) to enable " +
-      "recipient-private pay-by-name. Owner-only, non-custodial; small rent top-up on first call. " +
-      "dryRun:true previews without signing.",
+      "Publish your .null name's NullPay stealth meta-address (SET_STEALTH_META) on the configured " +
+      "registrar to enable recipient-private pay-by-name. Owner-only, non-custodial; small rent " +
+      "top-up on first call. dryRun:true previews without signing." +
+      FROZEN_NOTE,
     parameters: {
       name: { type: "string", description: "Your .null name (you must be its owner)." },
       stealth_meta_hex: { type: "string", description: "64 bytes as 128 hex chars: spend_pub[32]||view_pub[32]." },
       dryRun: { type: "boolean", description: "Preview without signing." },
     },
     async handler(params: Record<string, unknown>) {
+      if (retired) return retiredRefusal(registrar);
       const name = String(params.name ?? "");
       const metaHex = String(params.stealth_meta_hex ?? "");
       const v = validateName(name);
@@ -439,8 +502,9 @@ export function buildRegistrarTools(
       if (dryRun || !signer) {
         return {
           ok: true,
-          dry_run: !!signer,
+          dry_run: true,
           name: `${normalizeName(name)}.null`,
+          registrar,
           pda: deriveDomainPda(name, registrar).toBase58(),
           owner,
           note: signer ? "Preview only — re-run without dryRun to publish." : "No signer configured — preview only.",
@@ -455,7 +519,7 @@ export function buildRegistrarTools(
       const unsigned = await buildUnsignedTx(connection, owner, [ix]);
       const signed = await signer.signTransaction(unsigned.txBase64);
       const signature = await broadcastSigned(connection, signed, unsigned.blockhash, unsigned.lastValidBlockHeight);
-      return { ok: true, name: `${normalizeName(name)}.null`, pda: probe.pda, signature, explorer_url: EXPLORER + signature };
+      return { ok: true, name: `${normalizeName(name)}.null`, registrar, pda: probe.pda, signature, explorer_url: explorerUrl(signature, rpcUrl) };
     },
   };
 
