@@ -217,9 +217,11 @@
         "no sendTransaction or sendRawTransaction call in src/"
       ],
       "not_demonstrated": [
-        "receipt anchoring (unavailable until a receipt_anchor deployment is configured)"
+        "receipt anchoring: the server configures no receipt_anchor program and refuses; a devnet receipt_anchor runs at HSdEQWunzPtNqdzv5HfXuA3zwPLpgTXRyfbndnGamhXs since 2026-10-06"
       ],
-      "operational_limitations": [],
+      "operational_limitations": [
+        "Git 6be29cf (after the snapshot) changes the anchor_receipt and check_nullifier refusal text to name the devnet receipt_anchor and dark_nullifier_record; npm 0.2.0 carries the earlier wording. The mcp-server tests were not re-run at 6be29cf."
+      ],
       "supersedes": null
     },
     {
@@ -262,7 +264,7 @@
         "PROGRAMS lists only dark_secp256k1_auth; the closed mainnet receipt_anchor id and the RECEIPT_ANCHOR export are removed (Git 0.2.0)"
       ],
       "not_demonstrated": [
-        "writes: .null write builders are unavailable until the registrar relaunch",
+        "writes: the plugin has no .null write path; the mainnet registrar is retired and the devnet null_registrar 3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ (2026-10-06) is not called",
         "a live lookup in this review pass"
       ],
       "operational_limitations": [

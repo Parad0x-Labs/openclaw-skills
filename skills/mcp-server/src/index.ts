@@ -446,7 +446,7 @@ async function privateCompute(params: {
   const resultHash = sha256hex(JSON.stringify(executorResponse));
 
   // Step 6: Commitment over (input_hash, result_hash). Computed locally; the
-  // on-chain anchor is refused — receipt_anchor has no usable deployment.
+  // on-chain anchor is refused — this server configures no receipt_anchor program.
   let commitment: Record<string, unknown> | undefined;
 
   if (anchor) {

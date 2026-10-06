@@ -69,8 +69,9 @@ pay_x402("myagent.null")   →  resolve the record → read its x402 endpoint �
 endpoint), and `mcp-server`'s `resolve_null` reads any name's owner + endpoint +
 stealth meta. Recipient-private pay-by-name (payment to a one-time stealth address)
 runs on devnet under a fresh key since 2026-10-06 (`null_registrar` `3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ`).
-Registering new names and publishing endpoints (`UPDATE_ENDPOINT`) resume with the
-relaunch.
+On the retired mainnet registrar, registering names and publishing endpoints
+(`UPDATE_ENDPOINT`) stay frozen; `web0-onboard`'s write builders refuse it and build only
+against a registrar set in config (e.g. devnet).
 
 ## Notes
 
