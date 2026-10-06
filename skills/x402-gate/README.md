@@ -1,19 +1,19 @@
 # openclaw-x402-gate — charge other agents with x402 on Solana
 
-> 🔒 **Install on a wallet host with `npm install --ignore-scripts`** (or `--omit=optional`).
+> **Install on a wallet host with `npm install --ignore-scripts`** (or `--omit=optional`).
 > This package runs where your seller key lives; `--ignore-scripts` blocks any
 > transitive install-time code. The only native addons are optional and unused here,
 > so nothing is lost. npm can't enforce this from inside a package — it's on you.
 > [Details ↓](#install-safety)
 
-> 💜 If it earns its keep, [star openclaw-skills](https://github.com/Parad0x-Labs/openclaw-skills) — stars are how agent builders find it.
+> If it earns its keep, [star openclaw-skills](https://github.com/Parad0x-Labs/openclaw-skills) — stars are how agent builders find it.
 
 Turn any OpenClaw skill or API into a paid endpoint. Mint an HTTP **402 Payment
 Required** challenge, verify the payment, then serve. Funds settle **straight to
 your own wallet** on Solana — the skill holds no keys and takes no custody. Pairs
 with [`x402-pay`](../x402-pay)
 (the paying side) for the full agent-to-agent loop on a rail that runs on
-Solana mainnet-beta (public beta, not yet audited; devnet by default for testing).
+Solana mainnet-beta (public beta; devnet by default for testing).
 
 ## Trust model
 
@@ -29,8 +29,7 @@ Solana mainnet-beta (public beta, not yet audited; devnet by default for testing
   protocol-fee leg to the protocol treasury (a Squads multisig) in the *same atomic
   transaction* as your seller payment. `requireOnChain` verifies both legs and refuses to
   serve if the fee is missing or short — fail-closed on the gating side. This is a
-  client-side on-chain check, not a program-enforced split (program-level fee enforcement
-  is not yet live). The fee amount and treasury are pinned in code on both the paying and
+  client-side on-chain check, not a program-enforced split. The fee amount and treasury are pinned in code on both the paying and
   gating sides, never read from the challenge, so it can't be zeroed or redirected. Still
   non-custodial: the fee settles directly on-chain, no one holds it.
 
@@ -117,12 +116,12 @@ startup — a second instance pointed at the same path **refuses to start**.
   your own **shared atomic store** (Redis `SETNX` / a DB unique constraint) around
   the returned `signature`/`receiptHash` before serving.
 
-> ⚠️ **Capabilities (`receiptScopeSeconds > 0`) are single-instance only** — they
+> **Capabilities (`receiptScopeSeconds > 0`) are single-instance only** — they
 > require `dedupe: true` + `replayStorePath` + `acknowledgeSingleInstance` and the
 > gate refuses them in multi-replica (`dedupe: false`) mode. `replayStorePath` must
 > be **local disk**; a shared/network filesystem across hosts defeats the lock.
 
-> 💡 **A capability is a PRE-PAID reuse window at the price paid.** It grants reuse
+> **A capability is a PRE-PAID reuse window at the price paid.** It grants reuse
 > for `receiptScopeSeconds` from the settling payment, and a later `priceUsdc` change
 > does **not** retroactively re-price or revoke an outstanding capability (the buyer
 > already paid for that term). Set `receiptScopeSeconds` to the longest window you're
@@ -143,7 +142,7 @@ native builds are `bufferutil` / `utf-8-validate` — **optional** perf addons o
 `@solana/web3.js`'s WebSocket stack; this skill makes only HTTP RPC calls, so they
 are never loaded, and skipping them loses nothing.
 
-> ⚠️ **npm cannot enforce this from inside a published package** — a dependency's
+> **npm cannot enforce this from inside a published package** — a dependency's
 > `overrides`/`scripts`/`.npmrc` don't govern your install, only your root project's
 > do. Treat `--ignore-scripts` as policy on any wallet host, and prefer building on
 > a host that does not hold the seller key.
@@ -171,10 +170,10 @@ are never loaded, and skipping them loses nothing.
 
 ## No external @parad0x_labs dependency
 
-Constants and wire types are vendored inline. The runtime dependencies are the
-well-known `@solana/web3.js` (on-chain confirmation) and `bs58` (decoding the SPL
-Memo instruction for program-attested receipt binding) — both pure JS. A production
-`npm audit --omit=dev --omit=peer` reports 0 high (gated at publish).
+Constants and wire types are vendored inline. The runtime dependencies are
+`@solana/web3.js` (on-chain confirmation), `bs58` (decoding the SPL Memo instruction
+for program-attested receipt binding), `typebox` (tool parameter schemas), and
+`snarkjs` + `poseidon-lite` (track-record proof verification).
 
 ## Source
 
