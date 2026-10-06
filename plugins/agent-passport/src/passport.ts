@@ -41,7 +41,7 @@ export const PROGRAM_STATUS = {
   dark_secp256r1_vault:
     "retired (mainnet) — existing WebAuthn vault accounts readable; no new vaults can be created",
   receipt_anchor:
-    "retired 2026-07-14 (mainnet) — historical anchors readable; anchoring runs on devnet (CPQ8Y1bdRiadxLMhrQG14Atc3E5eNJhqwPX1nXtH1Mst)",
+    "retired 2026-07-14 (mainnet) — historical anchors readable; receipt anchoring is unavailable until the redeploy under a fresh key",
 } as const satisfies Record<keyof typeof PROGRAMS, string>;
 
 // Public RPC — never api.mainnet-beta.solana.com (403s with Origin header)
