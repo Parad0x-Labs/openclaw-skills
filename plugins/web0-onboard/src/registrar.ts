@@ -16,8 +16,12 @@
  * resolve read-only — but register / endpoint / stealth-meta / transfer writes
  * cannot succeed there. The write tools below therefore refuse the retired id
  * (dry runs included) and only build transactions when `config.registrar` names a
- * different, deployed registrar (e.g. the devnet null_registrar
- * 3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ, fresh key, 2026-10-06).
+ * different, deployed registrar with this instruction set.
+ *
+ * The devnet null_registrar 3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ (fresh key,
+ * 2026-10-06) is the dna-x402 NullPay registrar: a different instruction set
+ * (0x06 is SET_STEALTH_META there, and its NullDomain has no x402 endpoint field).
+ * These encoders would build wrong instructions for it, so the tools refuse it too.
  *
  * Self-contained per the modularity contract: addresses are vendored, never the
  * seized pre-incident registrar.
@@ -47,12 +51,26 @@ export const REGISTRAR_RETIRED_ERROR =
   `The mainnet .null registrar (${NULL_REGISTRAR_MAINNET}) was retired on ${NULL_REGISTRAR_MAINNET_RETIRED_AT} ` +
   "and can no longer be invoked. Existing .null names still resolve read-only; registration, endpoint " +
   "updates, stealth-meta updates and transfers are frozen on mainnet. " +
-  "To write against a different deployed registrar (e.g. the devnet null_registrar " +
-  "3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ), set config.registrar and config.rpcUrl.";
+  "To write against a different deployed registrar with the same instruction set, set config.registrar and config.rpcUrl.";
 
 /** True if `registrar` is a retired program that can no longer accept writes. */
 export function isRetiredRegistrar(registrar: string): boolean {
   return registrar === NULL_REGISTRAR_MAINNET;
+}
+
+/** Devnet null_registrar (dna-x402 NullPay, fresh key, 2026-10-06) — a different instruction set. */
+export const NULLPAY_REGISTRAR_DEVNET = "3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ";
+
+/** Error returned by every write tool aimed at a registrar with a different instruction set. */
+export const REGISTRAR_INCOMPATIBLE_ERROR =
+  `${NULLPAY_REGISTRAR_DEVNET} is the devnet dna-x402 NullPay null_registrar (2026-10-06). Its instruction ` +
+  "set differs from the web0 registrar these tools encode (0x06 is SET_STEALTH_META there, and a name " +
+  "record has no x402 endpoint), so no transaction was built. Use the dna-x402 NullPay client for " +
+  "stealth pay-by-name on devnet.";
+
+/** True if `registrar` is a known registrar whose instruction set these encoders do not speak. */
+export function isIncompatibleRegistrar(registrar: string): boolean {
+  return registrar === NULLPAY_REGISTRAR_DEVNET;
 }
 
 // Instruction discriminators (registrar instruction.rs).
@@ -303,6 +321,10 @@ const explorerUrl = (sig: string, rpcUrl: string): string =>
   EXPLORER + sig + (/devnet/i.test(rpcUrl) ? "?cluster=devnet" : "");
 
 /** Refusal payload for a write aimed at a retired registrar (no network call). */
+function incompatibleRefusal(registrar: string): Record<string, unknown> {
+  return { ok: false, error: REGISTRAR_INCOMPATIBLE_ERROR, registrar };
+}
+
 function retiredRefusal(registrar: string): Record<string, unknown> {
   return {
     ok: false,
@@ -348,10 +370,12 @@ export function buildRegistrarTools(
   const conn = () => new Connection(rpcUrl, "confirmed");
   const payerOf = (): string | undefined => getSigner()?.publicKey ?? config.solanaWallet;
   const retired = isRetiredRegistrar(registrar);
+  const incompatible = isIncompatibleRegistrar(registrar);
   const FROZEN_NOTE =
     ` The mainnet registrar NXgQhepF… was retired ${NULL_REGISTRAR_MAINNET_RETIRED_AT}: against it this tool ` +
     "refuses (dry runs included) — existing names resolve read-only, writes to it are frozen. " +
-    "Works only when config.registrar names a different deployed registrar (e.g. devnet).";
+    "Works only when config.registrar names a different deployed registrar with the same instruction set " +
+    "(not the devnet dna-x402 NullPay registrar, which this tool also refuses).";
 
   const registerNullName: ToolDef = {
     name: "register_null_name",
@@ -366,6 +390,7 @@ export function buildRegistrarTools(
     },
     async handler(params: Record<string, unknown>) {
       if (retired) return retiredRefusal(registrar);
+      if (incompatible) return incompatibleRefusal(registrar);
       const name = String(params.name ?? "");
       const v = validateName(name);
       if (!v.ok) return { ok: false, error: v.error };
@@ -426,6 +451,7 @@ export function buildRegistrarTools(
     },
     async handler(params: Record<string, unknown>) {
       if (retired) return retiredRefusal(registrar);
+      if (incompatible) return incompatibleRefusal(registrar);
       const name = String(params.name ?? "");
       const endpoint = String(params.endpoint ?? "");
       const v = validateName(name);
@@ -488,6 +514,7 @@ export function buildRegistrarTools(
     },
     async handler(params: Record<string, unknown>) {
       if (retired) return retiredRefusal(registrar);
+      if (incompatible) return incompatibleRefusal(registrar);
       const name = String(params.name ?? "");
       const metaHex = String(params.stealth_meta_hex ?? "");
       const v = validateName(name);

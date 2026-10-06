@@ -201,7 +201,7 @@ test("buildOnboardPlan: name is validated but registration is frozen; storefront
   assert.match(withName.name.status, /retired on 2026-08-29/);
   assert.match(withName.name.status, /resolve read-only/);
   assert.match(withName.name.status, /frozen on mainnet/);
-  assert.match(withName.name.status, /3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ/);
+  assert.match(withName.name.status, /3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ .*dna-x402 NullPay registrar/);
   assert.equal(withName.name.claim_preview, undefined);
   assert.ok(withName.next_steps.some((s) => /registration is frozen/.test(s) && /read-only/.test(s)));
   // No step tells the agent to run a write tool against the retired registrar.

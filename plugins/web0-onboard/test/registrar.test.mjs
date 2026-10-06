@@ -12,6 +12,8 @@ import {
   NULL_REGISTRAR_MAINNET,
   NULL_REGISTRAR_MAINNET_RETIRED_AT,
   REGISTRAR_RETIRED_ERROR,
+  REGISTRAR_INCOMPATIBLE_ERROR,
+  NULLPAY_REGISTRAR_DEVNET,
   isRetiredRegistrar,
   readDomainOwner,
   deriveConfigPda,
@@ -98,7 +100,6 @@ test("the mainnet registrar is flagged retired (2026-08-29); other ids are not",
   assert.match(REGISTRAR_RETIRED_ERROR, /retired on 2026-08-29/);
   assert.match(REGISTRAR_RETIRED_ERROR, /resolve read-only/);
   assert.match(REGISTRAR_RETIRED_ERROR, /frozen on mainnet/);
-  assert.match(REGISTRAR_RETIRED_ERROR, /3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ/);
 });
 
 test("validateName mirrors the program rules (4-32, a-z/0-9/-)", () => {
@@ -262,6 +263,27 @@ test("write tools refuse on the default (retired) mainnet registrar — dryRun i
           assert.equal(res.dry_run, undefined); // no fee quote / preview of an impossible tx
           assert.equal(res.fee_lamports, undefined);
         }
+      }
+    }
+  }
+});
+
+test("write tools refuse the devnet dna-x402 NullPay registrar (different instruction set) — no RPC, no signing", async () => {
+  assert.equal(NULLPAY_REGISTRAR_DEVNET, "3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ");
+  const calls = [
+    ["register_null_name", { name: "myagent" }],
+    ["set_null_endpoint", { name: "myagent", endpoint: "https://api.myagent.dev/x402" }],
+    ["set_null_stealth_meta", { name: "myagent", stealth_meta_hex: META }],
+  ];
+  for (const signer of [null, tripwireSigner()]) {
+    const tools = buildRegistrarTools({ solanaWallet: WALLET, rpcUrl: DEAD_RPC, registrar: NULLPAY_REGISTRAR_DEVNET }, () => signer);
+    for (const [toolName, params] of calls) {
+      const tool = tools.find((t) => t.name === toolName);
+      for (const dryRun of [true, false]) {
+        const res = await tool.handler({ ...params, dryRun });
+        assert.equal(res.ok, false, `${toolName} must refuse the NullPay registrar`);
+        assert.equal(res.error, REGISTRAR_INCOMPATIBLE_ERROR);
+        assert.equal(res.registrar, NULLPAY_REGISTRAR_DEVNET);
       }
     }
   }

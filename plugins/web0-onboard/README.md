@@ -44,8 +44,9 @@ stealth-meta updates and transfers are **frozen on mainnet**.
 The seller tools below carry the verified registrar ABI. Against the default (retired
 mainnet) registrar each one refuses up front — dry runs included — with that message.
 They build transactions only when `registrar` in the plugin config names a different
-deployed registrar (e.g. the devnet `null_registrar`
-`3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ`, with a matching devnet `rpcUrl`). The host registers a
+deployed registrar with the same instruction set (and a matching `rpcUrl`). The devnet
+`null_registrar` `3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ` is the dna-x402 NullPay
+registrar, a different instruction set: these tools refuse it. The host registers a
 signer via `setWeb0Signer(wallet)`; your wallet signs every tx — the plugin never
 holds a key. Each tool takes `dryRun: true` to preview without signing.
 
@@ -56,7 +57,8 @@ holds a key. Each tool takes `dryRun: true` to preview without signing.
 | `set_null_stealth_meta({ name, stealth_meta_hex })` | publish a stealth address for recipient-private pay-by-name |
 
 Recipient-private pay-by-name to a one-time stealth address runs on devnet under a fresh
-key since 2026-10-06 (`null_registrar` `3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ`).
+key since 2026-10-06 through the dna-x402 NullPay client and its `null_registrar`
+`3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ`, not through these tools.
 
 ## How it fits
 

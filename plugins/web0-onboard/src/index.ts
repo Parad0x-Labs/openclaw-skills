@@ -73,7 +73,7 @@ const ConfigSchema = Type.Object(
     registrar: Type.Optional(
       Type.String({
         description:
-          ".null registrar program id for the seller write tools (register_null_name, set_null_endpoint, set_null_stealth_meta). Unset = the mainnet registrar NXgQhepF…, retired 2026-08-29: names resolve read-only and the write tools refuse. Set to a deployed registrar with a matching rpcUrl to write (e.g. the devnet null_registrar 3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ).",
+          ".null registrar program id for the seller write tools (register_null_name, set_null_endpoint, set_null_stealth_meta). Unset = the mainnet registrar NXgQhepF…, retired 2026-08-29: names resolve read-only and the write tools refuse. Set to a deployed registrar with the same instruction set and a matching rpcUrl to write. The devnet dna-x402 NullPay null_registrar 3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ uses a different instruction set and is refused.",
       }),
     ),
   },
@@ -117,7 +117,7 @@ export default defineToolPlugin({
     "Set up an agent on web0 — identity, a paid x402 storefront, the receipt-anchoring status " +
     "(this plugin does not anchor), and the .null name status. Sell services for USDC on Solana; funds settle to your own " +
     "wallet. Non-custodial. The mainnet .null registrar was retired 2026-08-29: existing names " +
-    "resolve read-only and the name write tools refuse it; they build only against a registrar set in config.",
+    "resolve read-only and the name write tools refuse it; they build only against a registrar with the same instruction set, set in config.",
   activation: { onStartup: false },
   configSchema: ConfigSchema,
   tools: (tool) =>

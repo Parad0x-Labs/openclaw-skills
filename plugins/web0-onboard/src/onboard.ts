@@ -11,7 +11,7 @@
  * runs the x402-gate. .null registration is frozen on mainnet (registrar
  * NXgQhepF… retired 2026-08-29; existing names resolve read-only), so the plan
  * never tells the agent to register there. The name write tools build only
- * against a registrar set in config (e.g. the devnet null_registrar).
+ * against a registrar with the same instruction set, set in config.
  *
  * Self-contained per the openclaw-skills modularity contract: constants are
  * vendored, never imported from sibling skills. No seized pre-incident IDs.
@@ -44,7 +44,7 @@ export const RECEIPT_ANCHOR_MAINNET_RETIRED_AT = "2026-07-14";
 /** Mainnet .null registrar — RETIRED 2026-08-29; accounts persist (read-only). */
 export const NULL_REGISTRAR_MAINNET = "NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np";
 export const NULL_REGISTRAR_MAINNET_RETIRED_AT = "2026-08-29";
-/** Devnet null_registrar (fresh key, 2026-10-06). The write tools target it only when set as config.registrar. */
+/** Devnet null_registrar (dna-x402 NullPay, fresh key, 2026-10-06): a different instruction set; the write tools refuse it. */
 const NULL_REGISTRAR_DEVNET = "3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ";
 
 /** USDC SPL mint per network. */
@@ -273,7 +273,8 @@ const NAME_STATUS =
   "names that already publish an endpoint. New registrations, endpoint updates, stealth-meta " +
   "updates and transfers are frozen on mainnet — the register_null_name / set_null_endpoint / " +
   "set_null_stealth_meta tools refuse against the retired registrar and build only against a " +
-  `registrar set in config (the devnet null_registrar ${NULL_REGISTRAR_DEVNET} runs since 2026-10-06). ` +
+  "registrar with the same instruction set, set in config. The devnet null_registrar " +
+  `${NULL_REGISTRAR_DEVNET} (2026-10-06) is the dna-x402 NullPay registrar, a different instruction set. ` +
   "Your storefront does not need a name: buyers can pay your x402-gate URL directly.";
 
 /**
@@ -366,7 +367,8 @@ export function buildOnboardPlan(opts: {
         : "Optionally bind your identity with the agent-passport plugin (recommended for verifiable counterparties).",
       `Keep the receipt hashes x402-gate and x402-pay derive: ${RECEIPT_ANCHORING_UNAVAILABLE} (the mainnet receipt_anchor program was retired ${RECEIPT_ANCHOR_MAINNET_RETIRED_AT}).`,
       `.null names: mainnet registration is frozen (mainnet registrar retired ${NULL_REGISTRAR_MAINNET_RETIRED_AT}); existing names resolve read-only. ` +
-        `The name write tools build only against a registrar set in config (devnet null_registrar ${NULL_REGISTRAR_DEVNET}).` +
+        "The name write tools build only against a registrar with the same instruction set, set in config " +
+        `(the devnet dna-x402 NullPay registrar ${NULL_REGISTRAR_DEVNET} is not one).` +
         (fullName ? ` ${fullName} is a valid label for such a registrar.` : ""),
     ],
     summary:

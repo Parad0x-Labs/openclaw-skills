@@ -38,8 +38,9 @@ names resolve read-only; registration, endpoint updates, stealth-meta updates an
 transfers are frozen on mainnet. Against the default (retired) registrar
 every tool below refuses — dry runs included — and says so. They build transactions
 only when the plugin config sets `registrar` to a different deployed registrar
-(e.g. the devnet `null_registrar` `3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ`,
-with a matching devnet `rpcUrl`). Your wallet signs (registered by the host
+with the same instruction set (and a matching `rpcUrl`). The devnet `null_registrar`
+`3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ` is the dna-x402 NullPay registrar, a
+different instruction set: these tools refuse it. Your wallet signs (registered by the host
 via `setWeb0Signer(signer)`); every tool takes `dryRun: true`.
 
 - **`register_null_name({ name })`** — register a `.null` name on the configured
@@ -47,8 +48,8 @@ via `setWeb0Signer(signer)`); every tool takes `dryRun: true`.
 - **`set_null_endpoint({ name, endpoint })`** — publish your x402 endpoint on the
   name (`UPDATE_ENDPOINT`). Owner-only, tiny tx fee.
 - **`set_null_stealth_meta({ name, stealth_meta_hex })`** — publish a NullPay
-  stealth address for recipient-private pay-by-name (pay-by-name to a one-time
-  stealth address runs on devnet under a fresh key since 2026-10-06).
+  stealth address for recipient-private pay-by-name (on devnet, stealth pay-by-name
+  runs through the dna-x402 NullPay client since 2026-10-06, not through this tool).
 
 ## The loop it sets up
 
@@ -78,8 +79,8 @@ buyer:  pay_x402(<your x402-gate URL>)  → quote → pay USDC → receipt hash
 - `.null` names: the mainnet registrar `NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np`
   was retired 2026-08-29. Existing names resolve read-only; writes to it are refused.
   Recipient-private pay-by-name to a one-time stealth
-  address runs on devnet under a fresh key since 2026-10-06 (`null_registrar`
-  `3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ`).
+  address runs on devnet under a fresh key since 2026-10-06 through the dna-x402
+  NullPay client (`null_registrar` `3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ`).
 
 ## Config (all optional defaults)
 
@@ -93,8 +94,8 @@ buyer:  pay_x402(<your x402-gate URL>)  → quote → pay USDC → receipt hash
           "solanaWallet": "<your base58 wallet>",
           "name": "myagent",
           "network": "solana-mainnet",
-          // optional: a deployed registrar for the name write tools (unset = retired mainnet → refused)
-          // "registrar": "3RhyFd57nP7R1HysZC14M9xs9T6e1cJNrqBTAFnaF9mZ", "rpcUrl": "https://api.devnet.solana.com"
+          // optional: a deployed registrar with the web0 registrar instruction set (unset = retired mainnet → refused)
+          // "registrar": "<registrar program id>", "rpcUrl": "<matching RPC>"
         }
       }
     }
