@@ -77,6 +77,14 @@ jobs:
         if: matrix.changed == 'true'
         working-directory: skills/${{ matrix.name }}
         run: npm run typecheck
+      - name: Tests and public-fixture benchmark (context-capsule)
+        if: matrix.changed == 'true' && matrix.name == 'context-capsule'
+        working-directory: skills/context-capsule
+        run: |
+          cp bench/results/latest.json "$RUNNER_TEMP/committed-latest.json"
+          npm test
+          node bench/fixture-bench.mjs
+          node bench/check-drift.mjs "$RUNNER_TEMP/committed-latest.json" bench/results/latest.json
       - name: Claims guard — no audit-date claims allowed
         if: matrix.changed == 'true'
         working-directory: skills/${{ matrix.name }}

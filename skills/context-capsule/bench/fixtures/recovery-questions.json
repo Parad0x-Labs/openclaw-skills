@@ -1,0 +1,248 @@
+[
+  {
+    "id": 1,
+    "question": "Which TypeScript source files were changed during this session?",
+    "required_keywords": ["compress.ts", "merkle.ts", "anchor.ts"],
+    "category": "files"
+  },
+  {
+    "id": 2,
+    "question": "What function in anchor.ts submits the Solana transaction?",
+    "required_keywords": ["anchorReceipts", "anchor.ts"],
+    "category": "files"
+  },
+  {
+    "id": 3,
+    "question": "What is the npm package name for this module?",
+    "required_keywords": ["@parad0x_labs", "receipt-anchor"],
+    "category": "files"
+  },
+  {
+    "id": 4,
+    "question": "What is the canonical field ordering used in compressReceipt?",
+    "required_keywords": ["amount", "paymentId", "compress.ts"],
+    "category": "files"
+  },
+  {
+    "id": 5,
+    "question": "What interface is defined in compress.ts to represent a payment receipt?",
+    "required_keywords": ["Receipt", "paymentId", "amount"],
+    "category": "files"
+  },
+  {
+    "id": 6,
+    "question": "What was the BigInt bug found in compress.ts and what exactly crashed?",
+    "required_keywords": ["BigInt(null)", "TypeError", "null"],
+    "category": "bugs"
+  },
+  {
+    "id": 7,
+    "question": "How was the BigInt null crash in compress.ts fixed?",
+    "required_keywords": ["0n", "BigInt", "null"],
+    "category": "bugs"
+  },
+  {
+    "id": 8,
+    "question": "What was wrong with the hash combination order in merkle.ts?",
+    "required_keywords": ["carry", "node", "hashPair"],
+    "category": "bugs"
+  },
+  {
+    "id": 9,
+    "question": "How was the merkle.ts hash order bug fixed?",
+    "required_keywords": ["hashPair", "right", "left"],
+    "category": "bugs"
+  },
+  {
+    "id": 10,
+    "question": "Which specific Merkle tests failed because of the wrong hash combination order?",
+    "required_keywords": ["two-leaf", "four-leaf", "AssertionError"],
+    "category": "bugs"
+  },
+  {
+    "id": 11,
+    "question": "What error is thrown when trying to build a Merkle root from an empty array?",
+    "required_keywords": ["Cannot build Merkle root", "empty leaves"],
+    "category": "bugs"
+  },
+  {
+    "id": 12,
+    "question": "Why was Poseidon rejected in favour of SHA-256 for the Merkle tree?",
+    "required_keywords": ["SHA-256", "Poseidon", "slower"],
+    "category": "decisions"
+  },
+  {
+    "id": 13,
+    "question": "Why was storing full receipt data on-chain rejected?",
+    "required_keywords": ["32-byte", "root", "expensive"],
+    "category": "decisions"
+  },
+  {
+    "id": 14,
+    "question": "What is the on-chain instruction format for receipt_anchor?",
+    "required_keywords": ["34 bytes", "0x01", "0x00"],
+    "category": "decisions"
+  },
+  {
+    "id": 15,
+    "question": "Why was SHA-256 chosen over Keccak-256 for this project?",
+    "required_keywords": ["SHA-256", "Solana", "Keccak"],
+    "category": "decisions"
+  },
+  {
+    "id": 16,
+    "question": "Why does the program ID come from environment variables rather than being hard-coded in source?",
+    "required_keywords": [".env", "RECEIPT_ANCHOR_PROGRAM_ID", "hard-coded"],
+    "category": "decisions"
+  },
+  {
+    "id": 17,
+    "question": "How many tests passed after both bugs were fixed?",
+    "required_keywords": ["31", "passed"],
+    "category": "tests"
+  },
+  {
+    "id": 18,
+    "question": "What is the name of the top-level test suite used in the test output?",
+    "required_keywords": ["receipt-anchor"],
+    "category": "tests"
+  },
+  {
+    "id": 19,
+    "question": "What is the exact command to run the tests once without watch mode?",
+    "required_keywords": ["vitest run"],
+    "category": "tests"
+  },
+  {
+    "id": 20,
+    "question": "How many tests are in the receipt-anchor > merkle sub-suite?",
+    "required_keywords": ["5", "merkle"],
+    "category": "tests"
+  },
+  {
+    "id": 21,
+    "question": "What are the highest-priority remaining TODOs for this project?",
+    "required_keywords": ["Arweave", "darkSecp256r1", "grant"],
+    "category": "todos"
+  },
+  {
+    "id": 22,
+    "question": "What needs to be wired into the anchorReceipts function for production authentication?",
+    "required_keywords": ["darkSecp256r1", "vault", "login"],
+    "category": "todos"
+  },
+  {
+    "id": 23,
+    "question": "What must be completed before Liquefy integration can be implemented?",
+    "required_keywords": ["Arweave", "upload"],
+    "category": "todos"
+  },
+  {
+    "id": 24,
+    "question": "What external grant application remains to be submitted?",
+    "required_keywords": ["Solana Foundation", "grant"],
+    "category": "todos"
+  },
+  {
+    "id": 25,
+    "question": "What types of files must never be committed to the repository?",
+    "required_keywords": ["keypair", ".env", "private keys"],
+    "category": "security"
+  },
+  {
+    "id": 26,
+    "question": "Where must private keys be stored according to the project security constraints?",
+    "required_keywords": [".env", "private keys"],
+    "category": "security"
+  },
+  {
+    "id": 27,
+    "question": "What is the exact byte layout requirement for the receipt_anchor instruction?",
+    "required_keywords": ["34 bytes", "0x01", "0x00"],
+    "category": "security"
+  },
+  {
+    "id": 28,
+    "question": "What security gap exists in anchorReceipts that must be resolved before production?",
+    "required_keywords": ["darkSecp256r1", "authentication", "keypair"],
+    "category": "security"
+  },
+  {
+    "id": 29,
+    "question": "What cargo command was used to build the Solana on-chain program?",
+    "required_keywords": ["cargo build-sbf", "receipt_anchor.so"],
+    "category": "commands"
+  },
+  {
+    "id": 30,
+    "question": "What was the solana CLI command used to deploy the compiled program to devnet?",
+    "required_keywords": ["solana program deploy", "--url devnet"],
+    "category": "commands"
+  },
+  {
+    "id": 31,
+    "question": "What was the FINAL decision on the storage system?",
+    "required_keywords": ["postgres"],
+    "category": "corrections",
+    "note": "Should NOT contain Redis — if Redis appears without correction context, correction was lost"
+  },
+  {
+    "id": 32,
+    "question": "Was the storage decision corrected at any point?",
+    "required_keywords": ["correct", "changed", "revised", "postgres", "redis"],
+    "category": "corrections"
+  },
+  {
+    "id": 33,
+    "question": "What was the original storage choice before the correction?",
+    "required_keywords": ["redis"],
+    "category": "corrections"
+  },
+  {
+    "id": 34,
+    "question": "What security constraint was explicitly stated as a rule not to violate?",
+    "required_keywords": ["keypair", "private", "commit", "git"],
+    "category": "corrections"
+  },
+  {
+    "id": 35,
+    "question": "If earlier messages said to use one approach and later messages said use a different approach, which approach should be used?",
+    "required_keywords": ["later", "final", "recent", "correction", "updated"],
+    "category": "corrections"
+  },
+  {
+    "id": 36,
+    "question": "When instructions conflict across different points in the conversation, which instruction takes precedence?",
+    "required_keywords": ["later", "last", "override", "supersede"],
+    "category": "corrections",
+    "note": "Tests instruction ordering — the later instruction always wins"
+  },
+  {
+    "id": 37,
+    "question": "What reason was given for abandoning the original storage approach in favour of the corrected one?",
+    "required_keywords": ["complexity", "infrastructure", "postgres"],
+    "category": "corrections",
+    "note": "Tests topic-specific correction with rationale — Redis was abandoned due to infrastructure complexity"
+  },
+  {
+    "id": 38,
+    "question": "Which storage technology was explicitly rejected and what was the stated reason for rejecting it?",
+    "required_keywords": ["redis", "complexity", "abandoned"],
+    "category": "corrections",
+    "note": "Tests what was rejected and why — Redis rejected for adding infrastructure complexity"
+  },
+  {
+    "id": 39,
+    "question": "What is the final, settled decision on session storage — not an intermediate proposal, but the concluded choice?",
+    "required_keywords": ["postgres", "final", "session"],
+    "category": "corrections",
+    "note": "Tests final vs intermediate decisions — Postgres is the final answer, Redis was only an intermediate proposal"
+  },
+  {
+    "id": 40,
+    "question": "Was the phrase 'scratch that' or an equivalent retraction used at any point, and what did it retract?",
+    "required_keywords": ["scratch", "redis", "retract"],
+    "category": "corrections",
+    "note": "Tests detection of explicit mid-session retraction markers — 'scratch that' cancels the Redis instruction"
+  }
+]

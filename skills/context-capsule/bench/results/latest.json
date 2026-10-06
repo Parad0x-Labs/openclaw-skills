@@ -1,0 +1,466 @@
+{
+  "schema": "openclaw-context-capsule.fixture-bench.v1",
+  "package_version": "1.7.0",
+  "fixture": "agent-session-100",
+  "messages": 109,
+  "questions": 40,
+  "answerable_questions": 35,
+  "unanswerable_question_ids": [
+    32,
+    35,
+    36,
+    39,
+    40
+  ],
+  "tokenizer": "chars/4 estimate (Math.ceil(length / 4)); no model tokenizer",
+  "model_calls": 0,
+  "metric_note": "keyword_pass = every required keyword present in the text the model would receive. Availability check only, not model task success.",
+  "plugin_config": {
+    "keepRecentMessages": 10,
+    "maxCapsuleTokens": 1400,
+    "tokenBudget": null
+  },
+  "plugin_default_breakdown": {
+    "capsule_tokens": 1400,
+    "system_prompt_addition_tokens": 1479,
+    "tail_tokens": 581,
+    "older_history_tokens": 6699
+  },
+  "arms": {
+    "full_history": {
+      "tokens_per_call": 7281,
+      "keyword_pass": 35,
+      "keyword_pass_percent": 87.5,
+      "keyword_pass_answerable": 35
+    },
+    "window_last_10": {
+      "tokens_per_call": 581,
+      "keyword_pass": 9,
+      "keyword_pass_percent": 22.5,
+      "keyword_pass_answerable": 9
+    },
+    "plugin_default": {
+      "tokens_per_call": 2061,
+      "keyword_pass": 21,
+      "keyword_pass_percent": 52.5,
+      "keyword_pass_answerable": 21
+    },
+    "capsule_all_700": {
+      "tokens_per_call": 698,
+      "keyword_pass": 12,
+      "keyword_pass_percent": 30,
+      "keyword_pass_answerable": 12
+    },
+    "capsule_all_1400": {
+      "tokens_per_call": 1400,
+      "keyword_pass": 15,
+      "keyword_pass_percent": 37.5,
+      "keyword_pass_answerable": 15
+    }
+  },
+  "per_question": [
+    {
+      "id": 1,
+      "category": "files",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": true,
+      "plugin_default": true,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 2,
+      "category": "files",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": true,
+      "capsule_all_700": true,
+      "capsule_all_1400": true
+    },
+    {
+      "id": 3,
+      "category": "files",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 4,
+      "category": "files",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": true,
+      "plugin_default": true,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 5,
+      "category": "files",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": true,
+      "plugin_default": true,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 6,
+      "category": "bugs",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 7,
+      "category": "bugs",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 8,
+      "category": "bugs",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": true,
+      "capsule_all_700": false,
+      "capsule_all_1400": true
+    },
+    {
+      "id": 9,
+      "category": "bugs",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 10,
+      "category": "bugs",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 11,
+      "category": "bugs",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": true,
+      "capsule_all_700": true,
+      "capsule_all_1400": true
+    },
+    {
+      "id": 12,
+      "category": "decisions",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 13,
+      "category": "decisions",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 14,
+      "category": "decisions",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": true,
+      "capsule_all_700": true,
+      "capsule_all_1400": true
+    },
+    {
+      "id": 15,
+      "category": "decisions",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": true,
+      "plugin_default": true,
+      "capsule_all_700": false,
+      "capsule_all_1400": true
+    },
+    {
+      "id": 16,
+      "category": "decisions",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": true,
+      "capsule_all_700": true,
+      "capsule_all_1400": true
+    },
+    {
+      "id": 17,
+      "category": "tests",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 18,
+      "category": "tests",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": true,
+      "plugin_default": true,
+      "capsule_all_700": false,
+      "capsule_all_1400": true
+    },
+    {
+      "id": 19,
+      "category": "tests",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": true,
+      "capsule_all_700": true,
+      "capsule_all_1400": true
+    },
+    {
+      "id": 20,
+      "category": "tests",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": true,
+      "plugin_default": true,
+      "capsule_all_700": true,
+      "capsule_all_1400": true
+    },
+    {
+      "id": 21,
+      "category": "todos",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": true,
+      "plugin_default": true,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 22,
+      "category": "todos",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": true,
+      "capsule_all_700": true,
+      "capsule_all_1400": true
+    },
+    {
+      "id": 23,
+      "category": "todos",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": true,
+      "plugin_default": true,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 24,
+      "category": "todos",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": true,
+      "plugin_default": true,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 25,
+      "category": "security",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": true,
+      "capsule_all_700": true,
+      "capsule_all_1400": true
+    },
+    {
+      "id": 26,
+      "category": "security",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": true,
+      "capsule_all_700": true,
+      "capsule_all_1400": true
+    },
+    {
+      "id": 27,
+      "category": "security",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": true,
+      "capsule_all_700": true,
+      "capsule_all_1400": true
+    },
+    {
+      "id": 28,
+      "category": "security",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 29,
+      "category": "commands",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 30,
+      "category": "commands",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 31,
+      "category": "corrections",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 32,
+      "category": "corrections",
+      "answerable": false,
+      "full_history": false,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 33,
+      "category": "corrections",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": true,
+      "capsule_all_700": true,
+      "capsule_all_1400": true
+    },
+    {
+      "id": 34,
+      "category": "corrections",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": true,
+      "capsule_all_700": true,
+      "capsule_all_1400": true
+    },
+    {
+      "id": 35,
+      "category": "corrections",
+      "answerable": false,
+      "full_history": false,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 36,
+      "category": "corrections",
+      "answerable": false,
+      "full_history": false,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 37,
+      "category": "corrections",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 38,
+      "category": "corrections",
+      "answerable": true,
+      "full_history": true,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 39,
+      "category": "corrections",
+      "answerable": false,
+      "full_history": false,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    },
+    {
+      "id": 40,
+      "category": "corrections",
+      "answerable": false,
+      "full_history": false,
+      "window_last_10": false,
+      "plugin_default": false,
+      "capsule_all_700": false,
+      "capsule_all_1400": false
+    }
+  ],
+  "runtime_ms": 51,
+  "node": "v22.23.3",
+  "timestamp": "2026-10-06T08:38:28.120Z"
+}
