@@ -41,7 +41,9 @@ Solana — without ever handing the skill a private key.
 
 - `pay_x402({ url, method? })` → fetches the URL; on HTTP 402, pays within your cap
   and network, then returns the resource plus `{ paymentSignature, receiptHash,
-  amountUsdc }`. `url` may be a `name.null` to pay by name.
+  amountUsdc }`. `url` may be a `name.null` to pay by name — resolved read-only
+  against the legacy mainnet registrar (retired 2026-08-29; records readable,
+  registration/updates frozen).
 - `rep_identity()` → your agent's public reputation commitment, to bind a proof to
   this agent (hand it to a gate as `expectedAgentCommitment`). Reveals nothing secret.
 - `prove_reputation({ root, minCount, minVolume, windowStart, epoch, receipts })` →

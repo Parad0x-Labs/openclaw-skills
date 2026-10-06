@@ -17,7 +17,7 @@ import {
 
 const SEIZED_REGISTRAR = "H4wbFJucY9shJt95N8Bra532Z4nnkKhGEfqWvLcYfuDm";
 
-test("registrar is the clean mainnet id, never the seized one", () => {
+test("registrar is the legacy mainnet id (retired, records readable), never the seized one", () => {
   assert.equal(NULL_REGISTRAR_MAINNET, "NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np");
   assert.notEqual(NULL_REGISTRAR_MAINNET, SEIZED_REGISTRAR);
 });

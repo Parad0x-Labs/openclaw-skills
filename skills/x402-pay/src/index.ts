@@ -203,7 +203,7 @@ export default defineToolPlugin({
       description:
         "Fetch a URL or a .null name; if it returns HTTP 402, pay the demanded USDC " +
         "on Solana (within the configured cap and network) and return the resource. " +
-        "A name.null resolves on mainnet to its published x402 endpoint (pay-by-name). " +
+        "A name.null resolves (read-only, legacy mainnet registrar) to its published x402 endpoint (pay-by-name). " +
         "Refuses any payment over the configured USDC cap.",
       parameters: PayParams,
       async execute(params, rawConfig) {
@@ -220,7 +220,8 @@ export default defineToolPlugin({
         const url = String(params.url ?? "");
         if (!url) return { ok: false, error: "url is required" };
 
-        // Pay-by-name: a `name.null` resolves on mainnet to its published x402
+        // Pay-by-name: a `name.null` resolves read-only on the legacy mainnet
+        // registrar (retired 2026-08-29; records readable) to its published x402
         // endpoint, which is what we then pay. A plain URL is used as-is.
         let targetUrl = url;
         let resolvedName: { name: string; pda: string; owner?: string } | undefined;

@@ -1,10 +1,12 @@
 /**
  * .null name resolution — turn a `name.null` into its on-chain x402 endpoint.
  *
- * The live mainnet registrar stores each name's payment URL in the NullDomain
- * account, so pay_x402 can accept a name and pay it directly. Resolution is a
- * read on mainnet (where the registrar lives) via the keyless public node; the
- * payment that follows runs on whatever network the 402 challenge names.
+ * The legacy mainnet .null registrar stores each name's payment URL in the
+ * NullDomain account, so pay_x402 can accept a name and pay it directly. The
+ * registrar was retired 2026-08-29: its records stay readable (resolution keeps
+ * working), while registration, updates and transfers are frozen. Resolution is
+ * a read-only lookup on mainnet via the keyless public node; the payment that
+ * follows runs on whatever network the 402 challenge names.
  *
  * NullDomain byte layout (registrar state.rs):
  *   disc[1] @0 = 0x4E 'N' · name[64] @1 · owner[32] @65 · arweave_txid[32] @97
@@ -18,11 +20,12 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { createHash } from "crypto";
 
-/** Live mainnet .null registrar (clean redeploy under multisig). Public program
- *  id; override via opts.registrar. NEVER the seized pre-incident H4wbFJ…. */
+/** Legacy mainnet .null registrar (retired 2026-08-29; records readable,
+ *  registration/updates/transfers frozen). Public program id; override via
+ *  opts.registrar. NEVER the seized pre-incident H4wbFJ…. */
 export const NULL_REGISTRAR_MAINNET = "NXgQhepFpDCu935H1D4g34g59ZYbo1jR4tBCZWhV8Np";
 
-/** Keyless public-node mainnet RPC for resolution reads (registrar is mainnet). */
+/** Keyless public-node mainnet RPC for resolution reads (the legacy registrar's records live on mainnet). */
 export const RESOLVE_RPC_MAINNET = "https://solana-rpc.publicnode.com";
 
 const ND_DISC = 0x4e; // 'N'
@@ -100,7 +103,7 @@ export function parseNullDomain(name: string, pda: string, data: Buffer): NullRe
   return res;
 }
 
-/** Resolve a `.null` name on mainnet → owner + x402 endpoint + stealth meta. */
+/** Resolve a `.null` name (read-only, legacy mainnet registrar) → owner + x402 endpoint + stealth meta. */
 export async function resolveNullName(
   name: string,
   opts?: { rpcUrl?: string; registrar?: string },
