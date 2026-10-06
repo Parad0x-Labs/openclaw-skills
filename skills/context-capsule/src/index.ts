@@ -112,9 +112,24 @@ function getOwnRecord(value: unknown, key: string): unknown {
   return (value as Record<string, unknown>)[key];
 }
 
-function readPluginConfig(ctx: unknown): CapsuleConfig {
-  const config = getOwnRecord(getOwnRecord(getOwnRecord(ctx, "config"), "plugins"), "entries");
-  const raw = getOwnRecord(config, "context-capsule");
+/**
+ * Resolve this plugin's settings. OpenClaw stores them at
+ * `plugins.entries.context-capsule.config` (validated against openclaw.plugin.json)
+ * and passes them to register() as `api.pluginConfig`. When a host does not pass
+ * pluginConfig, the same `config` object is read from the factory context's
+ * OpenClaw config; keys placed directly on the entry are read last, for hosts
+ * that use that older layout.
+ */
+function readPluginConfig(ctx: unknown, pluginConfig?: unknown): CapsuleConfig {
+  const entries = getOwnRecord(getOwnRecord(getOwnRecord(ctx, "config"), "plugins"), "entries");
+  const entry = getOwnRecord(entries, "context-capsule");
+  const nested = getOwnRecord(entry, "config");
+  const raw =
+    pluginConfig && typeof pluginConfig === "object"
+      ? pluginConfig
+      : nested && typeof nested === "object"
+        ? nested
+        : entry;
   const record = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   return {
     minMessages: integerFromConfig(record.minMessages, DEFAULT_MIN_MESSAGES, 1, 10000),
@@ -236,7 +251,7 @@ class ContextCapsuleEngine implements ContextEngine {
   readonly info: ContextEngineInfo = {
     id: "context-capsule",
     name: "Context Capsule",
-    version: "1.7.1",
+    version: "1.7.2",
     ownsCompaction: false,
     turnMaintenanceMode: "background",
   };
@@ -361,7 +376,14 @@ export default definePluginEntry({
     "It preserves durable facts, tasks, decisions, errors, files, commands, and " +
     "links while cutting prompt tokens on long-running sessions. Compression and " +
     "best-effort secret redaction run locally with no network or file-system access.",
-  register(api: { registerContextEngine: (id: string, factory: (ctx: unknown) => ContextEngine) => void }) {
-    api.registerContextEngine("context-capsule", (ctx: unknown) => new ContextCapsuleEngine(readPluginConfig(ctx)));
+  register(api: {
+    registerContextEngine: (id: string, factory: (ctx: unknown) => ContextEngine) => void;
+    pluginConfig?: Record<string, unknown>;
+  }) {
+    const pluginConfig = api.pluginConfig;
+    api.registerContextEngine(
+      "context-capsule",
+      (ctx: unknown) => new ContextCapsuleEngine(readPluginConfig(ctx, pluginConfig)),
+    );
   },
 });

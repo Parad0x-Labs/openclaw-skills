@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.7.2
+
+- **Fix: plugin config is read from `plugins.entries.context-capsule.config`.**
+  OpenClaw keeps plugin settings under the entry's `config` object (validated against
+  `openclaw.plugin.json`) and passes them to `register()` as `api.pluginConfig`.
+  1.7.1 read the keys directly from the entry, so a valid OpenClaw config never
+  reached the engine and the documented layout (keys directly on the entry) is
+  rejected by OpenClaw's config validation. The engine now reads `api.pluginConfig`,
+  then the entry's `config` object, then the older direct-key layout.
+- **Docs.** README and SKILL.md config examples nest the settings under `config`.
+
 ## 1.7.1
 
 Docs, comments and one internal rename; behaviour is unchanged from 1.7.0.

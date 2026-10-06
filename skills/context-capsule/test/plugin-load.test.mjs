@@ -133,4 +133,17 @@ const res2 = await engine.assemble({ sessionId: 's1', messages: longChat, tokenB
 assert.equal(allText(res2.messages), allText(res.messages), 'assemble deterministic');
 log('assemble(): deterministic across runs');
 
+// 9. plugin config is read from where OpenClaw keeps it: api.pluginConfig
+//    (= plugins.entries.context-capsule.config), else the same object in the factory ctx.
+const engineFor = async (apiExtra, ctx) => {
+  let f;
+  entry.register({ registerContextEngine(_id, fn) { f = fn; }, ...apiExtra });
+  return await f(ctx);
+};
+const viaApi = await engineFor({ pluginConfig: { keepRecentMessages: 3 } }, { config: {} });
+assert.equal((await viaApi.assemble({ sessionId: 'c1', messages: longChat, tokenBudget: 8000 })).messages.length, 3, 'api.pluginConfig honoured');
+const viaCtx = await engineFor({}, { config: { plugins: { entries: { 'context-capsule': { enabled: true, config: { keepRecentMessages: 4 } } } } } });
+assert.equal((await viaCtx.assemble({ sessionId: 'c2', messages: longChat, tokenBudget: 8000 })).messages.length, 4, 'entries.<id>.config honoured');
+log('config: api.pluginConfig and plugins.entries.context-capsule.config both honoured');
+
 console.log('\nplugin-load.test.mjs: ALL plugin-contract assertions passed — loads & runs as a real OpenClaw context engine.');

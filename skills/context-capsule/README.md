@@ -67,16 +67,23 @@ data moves: `docs/CONTEXT_CAPSULE_DATAFLOW.md`.
   "plugins": {
     "entries": {
       "context-capsule": {
-        "minMessages": 20,
-        "keepRecentMessages": 10,
-        "maxCapsuleTokens": 1400,
-        "capsuleTokenRatio": 0.14,
-        "minCompressTokens": 900
+        "enabled": true,
+        "config": {
+          "minMessages": 20,
+          "keepRecentMessages": 10,
+          "maxCapsuleTokens": 1400,
+          "capsuleTokenRatio": 0.14,
+          "minCompressTokens": 900
+        }
       }
     }
   }
 }
 ```
+
+Settings go under `config` in the plugin entry: OpenClaw validates
+`plugins.entries.context-capsule.config` against `openclaw.plugin.json` and rejects
+keys placed directly on the entry.
 
 ## Packaging
 

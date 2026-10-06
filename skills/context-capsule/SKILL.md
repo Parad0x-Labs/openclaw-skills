@@ -117,11 +117,14 @@ Optional config (defaults shown):
   "plugins": {
     "entries": {
       "context-capsule": {
-        "minMessages": 20,
-        "keepRecentMessages": 10,
-        "maxCapsuleTokens": 1400,
-        "capsuleTokenRatio": 0.14,
-        "minCompressTokens": 900
+        "enabled": true,
+        "config": {
+          "minMessages": 20,
+          "keepRecentMessages": 10,
+          "maxCapsuleTokens": 1400,
+          "capsuleTokenRatio": 0.14,
+          "minCompressTokens": 900
+        }
       }
     }
   }
