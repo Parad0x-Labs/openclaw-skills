@@ -119,12 +119,14 @@ confirm() {
 
 # Stuff that often leaks. Add org-specific strings as needed.
 USER_NAME="$(id -un 2>/dev/null || true)"
+# macOS home-directory prefix, split so this script does not match its own scan.
+MAC_HOME_PREFIX="/""Users/"
 HOME_DIR="${HOME:-}"
 NAME_HINTS=(
   "${USER_NAME}"
   "Desktop/27122025"
   "${HOME_DIR}"
-  "/Users/"
+  "${MAC_HOME_PREFIX}"
 )
 
 SECRET_PATTERNS=(
@@ -254,7 +256,7 @@ echo "[STEP] Scanning staged filenames for private path leaks..."
 path_warn=0
 while IFS= read -r f; do
   [[ -z "$f" ]] && continue
-  if [[ "$f" == *"/Users/"* || "$f" == *"${USER_NAME}"* ]]; then
+  if [[ "$f" == *"${MAC_HOME_PREFIX}"* || "$f" == *"${USER_NAME}"* ]]; then
     echo "[WARN] Suspicious staged path name: $f"
     path_warn=1
   fi
