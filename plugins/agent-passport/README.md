@@ -1,4 +1,4 @@
-# @parad0x_labs/openclaw-agent-passport 🪪
+# @parad0x_labs/openclaw-agent-passport
 
 On-chain identity for OpenClaw agents — a `.null` name, ETH↔Solana binding, and
 verifiable agent identity, **without ever touching a private key**.

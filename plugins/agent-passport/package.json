@@ -1,10 +1,15 @@
 {
   "name": "@parad0x_labs/openclaw-agent-passport",
-  "version": "0.1.0",
-  "description": "OpenClaw plugin — on-chain agent identity for the web0 stack (.null names, ETH↔Solana binding)",
+  "version": "0.1.1",
+  "description": "OpenClaw plugin — read-only agent identity lookups for the web0 stack (legacy ETH↔Solana bindings and WebAuthn vault accounts)",
   "type": "module",
   "main": "./src/index.ts",
-  "files": ["src/", "openclaw.plugin.json", "SKILL.md", "README.md"],
+  "files": [
+    "src/",
+    "openclaw.plugin.json",
+    "SKILL.md",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -22,12 +27,20 @@
     "@types/node": "^22.0.0",
     "typescript": "^5.6.0"
   },
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "license": "MIT",
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Parad0x-Labs/openclaw-skills",
+    "url": "https://github.com/Parad0x-Labs/openclaw-skills.git",
     "directory": "plugins/agent-passport"
+  },
+  "homepage": "https://github.com/Parad0x-Labs/openclaw-skills/tree/main/plugins/agent-passport#readme",
+  "bugs": {
+    "url": "https://github.com/Parad0x-Labs/openclaw-skills/issues"
   }
 }
