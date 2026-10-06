@@ -1,7 +1,7 @@
 {
   "name": "@parad0x_labs/mcp-server",
-  "version": "0.1.1",
-  "description": "MCP server for the Parad0x Labs stack — x402 payments, receipt anchoring, agent identity, Liquefy compression",
+  "version": "0.2.0",
+  "description": "MCP server for the Parad0x Labs stack: x402 payment quotes, receipt hashing, read-only .null and Dark Passport lookups, outcome receipts, Liquefy-format receipt compression",
   "type": "module",
   "bin": {
     "parad0x-mcp": "./dist/index.js"
@@ -35,7 +35,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Parad0x-Labs/openclaw-skills",
+    "url": "https://github.com/Parad0x-Labs/openclaw-skills.git",
     "directory": "skills/mcp-server"
+  },
+  "homepage": "https://github.com/Parad0x-Labs/openclaw-skills/tree/main/skills/mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/Parad0x-Labs/openclaw-skills/issues"
   }
 }

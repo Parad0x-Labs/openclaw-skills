@@ -2,6 +2,11 @@
 
 Exposes the Parad0x Labs stack as MCP tools. Works with Claude Desktop, Cursor, Windsurf, and any MCP-compatible agent runtime.
 
+Version 0.2.0 replaces the withdrawn 0.1.x releases. It uses no program ID controlled
+by a compromised key: receipt anchoring and nullifier lookups refuse with a clear
+error until those programs are redeployed under a fresh key. No tool submits an
+on-chain transaction.
+
 ## Tools
 
 | Tool | Description |
@@ -15,6 +20,8 @@ Exposes the Parad0x Labs stack as MCP tools. Works with Claude Desktop, Cursor, 
 | `check_nullifier` | Validate a privacy-proof nullifier; the lookup is unavailable until the nullifier record program is redeployed under a fresh key |
 | `private_compute` | Encrypt locally, send ciphertext to an executor, return input/result hashes; `anchor:true` computes the commitment locally (on-chain anchoring unavailable until the redeploy) |
 | `get_stack_status` | Program addresses and their current status (retired mainnet programs, services awaiting redeploy, x402 settlement) |
+| `create_wallet` | Generate a new Solana keypair file on this machine (preview unless `confirm:true`); returns only the public key and path, never the secret |
+| `get_scope_status` / `grant_write_consent` / `revoke_write_consent` | Show and manage the per-session write consent for `anchor_receipt` and `private_compute` |
 
 ## Install
 
@@ -65,8 +72,8 @@ Add to `.cursor/mcp.json` or `.windsurf/mcp.json` in your project root:
 ## Build from source
 
 ```bash
-cd packages/mcp-server
-npm install
+cd skills/mcp-server
+npm ci --ignore-scripts
 npm run build
 npm start
 ```

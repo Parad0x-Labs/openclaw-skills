@@ -554,16 +554,14 @@ function getStackStatus(): object {
     },
     packages: [
       "@parad0x_labs/mcp-server",
-      "@parad0x_labs/null-miner-sdk",
-      "@parad0x_labs/liquefy-receipts",
-      "@parad0x_labs/outcome-receipts",
-      "@parad0x_labs/pay-to-receive",
-      "@parad0x_labs/receipt-dag",
-      "@parad0x_labs/session-channels",
-      "@parad0x_labs/task-marketplace-api",
-      "@parad0x_labs/nulllive-sdk",
+      "@parad0x_labs/openclaw-x402-pay",
+      "@parad0x_labs/openclaw-x402-gate",
+      "@parad0x_labs/openclaw-payment-session",
+      "@parad0x_labs/openclaw-context-capsule",
+      "@parad0x_labs/openclaw-agent-passport",
+      "@parad0x_labs/openclaw-web0-onboard",
     ],
-    github: "https://github.com/parad0x-labs/dna-x402",
+    github: "https://github.com/Parad0x-Labs/openclaw-skills",
     anchor_network: "none",
     status_timestamp: new Date().toISOString(),
   };
@@ -574,7 +572,7 @@ function getStackStatus(): object {
 // ---------------------------------------------------------------------------
 
 const server = new Server(
-  { name: "parad0x-mcp", version: "0.1.0" },
+  { name: "parad0x-mcp", version: "0.2.0" },
   {
     capabilities: {
       tools: {},
@@ -774,7 +772,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             rpc_url: {
               type: "string",
-              description: "Solana mainnet RPC URL (default: publicnode mainnet). The legacy registrar's records live on mainnet.",
+              description: "Solana mainnet RPC URL (default: publicnode mainnet). The legacy registrar's records are stored on mainnet.",
             },
           },
           required: ["name"],
