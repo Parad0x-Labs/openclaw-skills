@@ -5,11 +5,11 @@ Archives Dark Null Protocol settlement data (ZK proofs, nullifier records,
 withdrawal events) into Liquefy TraceVaults and optionally anchors them on
 Solana via an SPL Memo transaction.
 
-Program addresses
------------------
-dark_bn254_gate     : GCptvBYF8S6eVYoh15B7WAESc54FUHCpN1Ui6aHeQYZd
-dark_shielded_pool  : (pending audit)
-dark_semaphore      : Ev7HEFhhKTXk6kS2Y6ssbUcK9C7E6yZ589jJNjUrQV5p
+Program addresses (devnet, fresh key, 2026-10-06; listed for reference, never called)
+-------------------------------------------------------------------------------------
+dark_shielded_pool_program : FmLWnMKAM834GdqMr7Z22HrAdtJNhiaF2NTEPcpdBSZ3
+dark_nullifier_record      : CPMfXL73v9PDmxyPLTM97bzrNa5eg2AEpsac9XKzX9et
+dark_semaphore             : 4Zff8ZdQvk8m6CrCQ5wgMzEHm1AvsiJGpkRhfEcY2Lzu
 """
 
 from __future__ import annotations
@@ -27,10 +27,14 @@ from typing import Optional
 # Program registry
 # ---------------------------------------------------------------------------
 
+# Canonical Dark NULL runs on devnet. These IDs are informational (exported in the
+# plugin manifest); the bridge never invokes them — its only on-chain write is the
+# optional SPL Memo anchor of a vault hash (liquefy_vault_anchor below).
+DARK_NULL_PROGRAMS_CLUSTER = "devnet"
 DARK_NULL_PROGRAMS: dict[str, str] = {
-    "dark_bn254_gate": "GCptvBYF8S6eVYoh15B7WAESc54FUHCpN1Ui6aHeQYZd",
-    "dark_shielded_pool": "(pending audit)",
-    "dark_semaphore": "Ev7HEFhhKTXk6kS2Y6ssbUcK9C7E6yZ589jJNjUrQV5p",
+    "dark_shielded_pool_program": "FmLWnMKAM834GdqMr7Z22HrAdtJNhiaF2NTEPcpdBSZ3",
+    "dark_nullifier_record": "CPMfXL73v9PDmxyPLTM97bzrNa5eg2AEpsac9XKzX9et",
+    "dark_semaphore": "4Zff8ZdQvk8m6CrCQ5wgMzEHm1AvsiJGpkRhfEcY2Lzu",
 }
 
 # ---------------------------------------------------------------------------
@@ -317,13 +321,14 @@ PLUGIN_MANIFEST: dict = {
     "description": (
         "Archives Dark Null Protocol ZK settlement data (ZK proofs, nullifier records, "
         "withdrawal events) into AES-256-GCM encrypted Liquefy TraceVaults. "
-        "Optional on-chain anchoring via receipt_anchor (Solana Memo program)."
+        "Optional on-chain anchoring: an SPL Memo transaction carrying the vault hash."
     ),
     "commands": {
         "archive": "cmd_archive",
         "export_proof_bundle": "cmd_export_proof_bundle",
     },
     "programs": DARK_NULL_PROGRAMS,
+    "programs_cluster": DARK_NULL_PROGRAMS_CLUSTER,
     "requires": ["liquefy", "solders", "cryptography"],
     "event_input_file": "dark_null_events.jsonl",
     "vault_extension": ".vault",

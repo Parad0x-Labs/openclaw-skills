@@ -20,7 +20,9 @@ upstream `dna-x402` codebase, not in this bridge plugin.
 - Does not settle or net payments itself
 - Does not maintain off-chain state channels
 - Does not implement challenge/slashing logic
-- Does not broadcast or bundle Solana transactions
+- Does not broadcast payment transactions. Its only on-chain writes are optional
+  SPL Memo anchors of receipt hashes (`cmd_anchor_receipts`, run when `SOLANA_KEYPAIR`
+  is set; uses the `solana` CLI)
 - Does not validate that the upstream DNA service's protocol model is sound
 
 ## Quick Start
