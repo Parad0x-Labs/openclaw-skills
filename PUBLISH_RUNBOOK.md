@@ -16,7 +16,7 @@ paste-and-go checklist so a publish session is mechanical.
 | `@parad0x_labs/openclaw-x402-pay` | 2.0.0 | `skills/x402-pay` @ 2.0.1 | publish 2.0.1 (README and description strings) |
 | `@parad0x_labs/openclaw-x402-gate` | 2.0.0 | `skills/x402-gate` @ 2.0.1 | publish 2.0.1 (README) |
 | `@parad0x_labs/openclaw-payment-session` | 0.1.0 | `plugins/payment-session` @ 0.1.0 | no action (README/SKILL.md differ only cosmetically) |
-| `@parad0x_labs/openclaw-agent-passport` | 0.1.0 | `plugins/agent-passport` @ 0.1.1 | publish 0.1.1 |
+| `@parad0x_labs/openclaw-agent-passport` | 0.1.0 | `plugins/agent-passport` @ 0.2.0 | publish 0.2.0 |
 | `@parad0x_labs/openclaw-web0-onboard` | 0.1.0 | `plugins/web0-onboard` @ 0.2.0 | publish 0.2.0 |
 
 Release tarballs are built and tested from the committed sources in an isolated
