@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-label="openclaw-skills — Agents that pay, charge and keep receipts, in one install">
+<rect width="1280" height="360" fill="#0a0a0a"/>
+<g stroke="#303030" stroke-width="1"><line x1="80" y1="62" x2="1200" y2="62"/><line x1="80" y1="330" x2="1200" y2="330"/></g>
+<g stroke="#303030" stroke-width="1" fill="none" opacity="0.9">
+  <circle cx="1070" cy="170" r="96"/><circle cx="1070" cy="170" r="64"/><circle cx="1070" cy="170" r="32"/>
+  <line x1="974" y1="170" x2="1166" y2="170"/><line x1="1070" y1="74" x2="1070" y2="266"/>
+</g>
+<circle cx="1102" cy="138" r="5" fill="#92aa7c"/>
+<text x="80" y="48" font-family="JetBrains Mono, ui-monospace, Menlo, monospace" font-size="14" letter-spacing="2" fill="#a3a3a3">04 / AGENT SKILLS</text>
+<text x="1200" y="48" text-anchor="end" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="20" fill="#f0efeb">Parad<tspan font-family="JetBrains Mono, ui-monospace, Menlo, monospace" font-style="normal" font-size="17">0</tspan>x Labs</text>
+<text x="78" y="160" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="76" fill="#f0efeb">openclaw-skills</text>
+<text x="80" y="215" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#a3a3a3">Agents that pay, charge and keep receipts, in one install</text>
+<g transform="translate(80,270)"><rect width="188" height="34" rx="17" fill="#111111" stroke="#92aa7c" stroke-opacity="0.9"/><text x="94" y="22" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, Menlo, monospace" font-size="14" fill="#92aa7c">x402 USDC payments</text></g><g transform="translate(280,270)"><rect width="151" height="34" rx="17" fill="#111111" stroke="#a3a3a3" stroke-opacity="0.5"/><text x="75" y="22" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, Menlo, monospace" font-size="14" fill="#a3a3a3">OpenClaw · MCP</text></g><g transform="translate(442,270)"><rect width="151" height="34" rx="17" fill="#111111" stroke="#a3a3a3" stroke-opacity="0.5"/><text x="75" y="22" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, Menlo, monospace" font-size="14" fill="#a3a3a3">7 npm packages</text></g><g transform="translate(605,270)"><rect width="50" height="34" rx="17" fill="#111111" stroke="#a3a3a3" stroke-opacity="0.5"/><text x="25" y="22" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, Menlo, monospace" font-size="14" fill="#a3a3a3">MIT</text></g>
+</svg>
