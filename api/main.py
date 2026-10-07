@@ -254,11 +254,13 @@ async def compress_media(
 @app.get("/api/archive/{name}")
 def download_archive(name: str, api_key: str = Depends(get_auth_key)):
     """Authenticated download of processed artifacts (replaces the open static mount)."""
-    safe_name = sanitize_filename(name)
-    target = (UPLOAD_DIR / safe_name).resolve()
-    if not str(target).startswith(str(UPLOAD_DIR.resolve()) + os.sep) or not target.is_file():
+    upload_root = os.path.realpath(UPLOAD_DIR)
+    target = os.path.normpath(os.path.join(upload_root, sanitize_filename(name)))
+    if not target.startswith(upload_root + os.sep):
         raise HTTPException(status_code=404, detail="Not found")
-    return FileResponse(str(target))
+    if os.path.realpath(target) != target or not os.path.isfile(target):
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(target)
 
 @app.get("/api/stats")
 def get_stats():
