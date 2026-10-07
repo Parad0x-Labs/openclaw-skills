@@ -82,22 +82,28 @@ MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB default
 SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv", ".liquefy-guard", ".liquefy-tokens"}
 
 
-def _scan_secrets(fpath: Path) -> List[Dict]:
+def _scan_for_leaks(fpath: Path) -> List[Dict]:
+    """Report lines that look like leaked credentials.
+
+    A finding carries the file, line number, the pattern that matched and the
+    length of the match. It never carries any character of the matched value:
+    findings are printed, written into halt signal files and audit logs, so a
+    partial value there would itself be a leak.
+    """
     hits = []
     try:
         content = fpath.read_text("utf-8", errors="replace")
         for i, line in enumerate(content.splitlines(), 1):
             for pat in SECRET_PATTERNS:
-                if pat.search(line):
-                    match_text = pat.search(line).group(0)
-                    redacted = match_text[:8] + "..." + match_text[-4:] if len(match_text) > 16 else "***"
+                m = pat.search(line)
+                if m:
                     hits.append({
                         "type": "secret_leak",
                         "severity": "critical",
                         "file": str(fpath.name),
                         "line": i,
                         "pattern": pat.pattern[:40],
-                        "redacted_match": redacted,
+                        "match_length": m.end() - m.start(),
                         "message": f"Potential secret at {fpath.name}:{i}",
                     })
                     break
@@ -162,8 +168,7 @@ def _scan_directory(target_dir: Path, policy: Optional[Dict] = None) -> List[Dic
                 continue
 
             if fpath.suffix.lower() in scan_extensions and size < 2 * 1024 * 1024:
-                secret_hits = _scan_secrets(fpath)
-                violations.extend(secret_hits)
+                violations.extend(_scan_for_leaks(fpath))
 
     return violations
 

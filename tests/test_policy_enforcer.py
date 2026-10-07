@@ -12,7 +12,7 @@ sys.path.insert(0, str(REPO_ROOT / "tools"))
 sys.path.insert(0, str(REPO_ROOT / "api"))
 
 from liquefy_policy_enforcer import (
-    _scan_secrets,
+    _scan_for_leaks,
     _scan_directory,
     _write_kill_signal,
     _compute_hmac,
@@ -59,7 +59,7 @@ class TestScanSecrets:
     def test_detects_api_key(self, tmp_path):
         f = tmp_path / "leak.env"
         f.write_text("API_KEY=sk-proj-abc123def456ghi789jkl012mno345pqr\n")
-        hits = _scan_secrets(f)
+        hits = _scan_for_leaks(f)
         assert len(hits) >= 1
         assert hits[0]["type"] == "secret_leak"
         assert hits[0]["severity"] == "critical"
@@ -67,25 +67,37 @@ class TestScanSecrets:
     def test_detects_github_token(self, tmp_path):
         f = tmp_path / "config.json"
         f.write_text('{"token": "ghp_abc123def456ghi789jkl012mno345pqr678"}\n')
-        hits = _scan_secrets(f)
+        hits = _scan_for_leaks(f)
         assert len(hits) >= 1
 
     def test_detects_private_key(self, tmp_path):
         f = tmp_path / "key.pem"
         f.write_text("-----BEGIN RSA PRIVATE KEY-----\nfakekey\n-----END RSA PRIVATE KEY-----\n")
-        hits = _scan_secrets(f)
+        hits = _scan_for_leaks(f)
         assert len(hits) >= 1
 
     def test_detects_aws_key(self, tmp_path):
         f = tmp_path / "creds.txt"
         f.write_text("access_key=AKIAIOSFODNN7EXAMPLE\n")
-        hits = _scan_secrets(f)
+        hits = _scan_for_leaks(f)
         assert len(hits) >= 1
+
+    def test_finding_carries_no_part_of_the_match(self, tmp_path):
+        value = "sk-proj-abc123def456ghi789jkl012mno345pqr"
+        f = tmp_path / "leak.env"
+        f.write_text(f"API_KEY={value}\n")
+        hits = _scan_for_leaks(f)
+        assert len(hits) >= 1
+        assert "redacted_match" not in hits[0]
+        assert hits[0]["match_length"] >= 20
+        dumped = json.dumps(hits)
+        for i in range(len(value) - 3):
+            assert value[i:i + 4] not in dumped
 
     def test_clean_file_no_hits(self, tmp_path):
         f = tmp_path / "clean.json"
         f.write_text('{"name": "test", "value": 42}\n')
-        hits = _scan_secrets(f)
+        hits = _scan_for_leaks(f)
         assert len(hits) == 0
 
 
@@ -182,6 +194,11 @@ class TestCmdKill:
         signal_data = json.loads(signal_file.read_text())
         assert signal_data["action"] == "HALT"
         assert signal_data["violation_count"] > 0
+        stored = signal_file.read_text()
+        printed = capsys.readouterr().out
+        for fragment in ("sk-proj-", "abc123", "jkl012mno", "user:pass"):
+            assert fragment not in stored
+            assert fragment not in printed
 
 
 class TestWriteKillSignal:
