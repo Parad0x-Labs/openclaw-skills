@@ -16,4 +16,4 @@ pyyaml==6.0.3
 tenacity==8.2.3
 httpx==0.28.1
 rich==15.0.0
-typer==0.26.8
+typer==0.27.3
