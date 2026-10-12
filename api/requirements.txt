@@ -5,7 +5,7 @@ zstandard==0.25.0
 xxhash==3.6.0
 cryptography==50.0.2
 python-multipart==0.0.32
-blake3==0.4.1
+blake3==1.0.10
 passlib[bcrypt]==1.7.4
 python-dotenv==1.2.2
 sqlalchemy==2.0.51
