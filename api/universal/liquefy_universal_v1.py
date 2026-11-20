@@ -43,24 +43,6 @@ class LiquefyUniversalV1:
         self.high_compression_level = high_compression_level
         self.entropy_threshold = entropy_threshold
         self.dctx = zstd.ZstdDecompressor()
-        self._cctx_default = make_cctx(
-            level=self.level,
-            text_like=True,
-            write_content_size=True,
-            write_checksum=False,
-            write_dict_id=False,
-        )
-        self._cctx_high = (
-            self._cctx_default
-            if self.high_compression_level == self.level
-            else make_cctx(
-                level=self.high_compression_level,
-                text_like=True,
-                write_content_size=True,
-                write_checksum=False,
-                write_dict_id=False,
-            )
-        )
 
     @staticmethod
     def _sample_entropy(data: bytes, sample_size: int = 1 << 20) -> float:
@@ -86,7 +68,17 @@ class LiquefyUniversalV1:
     def compress(self, raw: bytes) -> bytes:
         raw = raw or b""
         level = self._select_level(raw)
-        cctx = self._cctx_high if level == self.high_compression_level else self._cctx_default
+        # Size the window to this input (capped at the portable decoder limit)
+        # so long-distance matching can reach across large files.
+        cctx = make_cctx(
+            level=level,
+            threads=self.threads,
+            text_like=True,
+            write_content_size=True,
+            write_checksum=False,
+            write_dict_id=False,
+            source_size=len(raw),
+        )
         payload = cctx.compress(raw)
         candidate_raw = payload
         candidate_v6 = PROTOCOL_ID + bytes([VERSION]) + struct.pack(">I", len(payload)) + payload
